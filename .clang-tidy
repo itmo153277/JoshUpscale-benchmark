@@ -1,0 +1,4 @@
+Checks: readability-*,-readability-magic-numbers,bugprone-*,performance-*
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 40

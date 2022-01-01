@@ -1,0 +1,15 @@
+BasedOnStyle: google
+Standard: c++17
+AccessModifierOffset: -4
+ConstructorInitializerIndentWidth: 4
+IndentWidth: 4
+TabWidth: 4
+AlignTrailingComments: true
+UseTab: ForIndentation
+AlignAfterOpenBracket: DontAlign
+AllowShortFunctionsOnASingleLine: None
+BreakConstructorInitializersBeforeComma: true
+DerivePointerAlignment: false
+PointerAlignment: Right
+IndentCaseLabels: false
+SpaceAfterCStyleCast: true
