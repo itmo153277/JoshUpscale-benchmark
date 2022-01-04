@@ -6,7 +6,7 @@
 import onnx
 import tf2onnx
 from onnxsim import simplify
-from tf_model import load_model, convert_model_to_nchw
+from tf_model_utils import load_model, convert_model_to_nchw
 
 
 def create_onnx_model(config_path: str, weight_path: str,
