@@ -26,72 +26,6 @@ def load_model(config_path: str, weight_path: str) -> keras.Model:
     return model
 
 
-def create_inference_model(model: keras.Model) -> tf.compat.v1.GraphDef:
-    """Create GraphDef from keras model."""
-    # pylint: disable=import-outside-toplevel
-
-    from tensorflow.python.framework.convert_to_constants \
-        import convert_variables_to_constants_v2
-
-    assert len(model.input) == 3
-
-    @tf.function
-    def model_inference(cur_frame, last_frame, pre_gen):
-        """Run model for inference."""
-        return model(
-            [cur_frame, last_frame, pre_gen], training=False)
-
-    model_inference = model_inference.get_concrete_function(
-        cur_frame=tf.TensorSpec(
-            model.input[0].shape,
-            model.input[0].dtype
-        ),
-        last_frame=tf.TensorSpec(
-            model.input[1].shape,
-            model.input[1].dtype
-        ),
-        pre_gen=tf.TensorSpec(
-            model.input[2].shape,
-            model.input[2].dtype
-        ))
-    model_inference = convert_variables_to_constants_v2(model_inference)
-    graph_def = model_inference.graph.as_graph_def()
-    for node in graph_def.node:
-        if node.name == model_inference.structured_outputs[0].op.name:
-            node.name = "output"
-            inputs_to_delete = [
-                inp for inp in node.input if inp[0] == "^"
-            ]
-            for inp in inputs_to_delete:
-                node.input.remove(inp)
-    return graph_def
-
-
-def convert_model_to_nchw(model: keras.Model,
-                          name: str = "final") -> keras.Model:
-    """Convert model from NHWC to NCHW."""
-    assert len(model.input) == 3
-    cur_frame = keras.Input(shape=np.array(
-        model.input[0].shape)[[3, 1, 2]], name="cur_frame")
-    last_frame = keras.Input(shape=np.array(
-        model.input[1].shape)[[3, 1, 2]], name="last_frame")
-    pre_gen = keras.Input(shape=np.array(
-        model.input[2].shape)[[3, 1, 2]], name="pre_gen")
-    cur_frame_pr = layers.Lambda(lambda x: K.permute_dimensions(
-        x, pattern=[0, 2, 3, 1]))(cur_frame)
-    last_frame_pr = layers.Lambda(lambda x: K.permute_dimensions(
-        x, pattern=[0, 2, 3, 1]))(last_frame)
-    pre_gen_pr = layers.Lambda(lambda x: K.permute_dimensions(
-        x, pattern=[0, 2, 3, 1]))(pre_gen)
-    output = model([cur_frame_pr, last_frame_pr, pre_gen_pr])
-    output = layers.Lambda(lambda x: K.permute_dimensions(
-        x, pattern=[0, 3, 1, 2]))(output)
-    output = layers.Layer(name="output")(output)
-    model = keras.Model(
-        inputs=[cur_frame, last_frame, pre_gen], outputs=output, name=name)
-    return model
-
-
 def optimize_for_inference(graph_def: tf.compat.v1.GraphDef,
                            input_info: Dict[str, tf.TensorSpec],
                            output_info: Dict[str, tf.TensorSpec]) \
@@ -149,6 +83,77 @@ def optimize_for_inference(graph_def: tf.compat.v1.GraphDef,
         [x.dtype.as_datatype_enum for x in input_info.values()]
     )
     return optimized_graph_def
+
+
+def create_inference_graph(model: keras.Model) -> tf.compat.v1.GraphDef:
+    """Create GraphDef from keras model."""
+    # pylint: disable=import-outside-toplevel
+
+    from tensorflow.python.framework.convert_to_constants \
+        import convert_variables_to_constants_v2
+
+    assert len(model.input) == 3
+
+    @tf.function
+    def model_inference(cur_frame, last_frame, pre_gen):
+        """Run model for inference."""
+        return model(
+            [cur_frame, last_frame, pre_gen], training=False)
+
+    input_specs = {
+        x.name: tf.TensorSpec(
+            x.shape,
+            x.dtype
+        ) for x in model.input
+    }
+    output_specs = {
+        "output": tf.TensorSpec(
+            model.output.shape,
+            model.output.dtype
+        )
+    }
+
+    model_inference = model_inference.get_concrete_function(
+        cur_frame=input_specs["cur_frame"],
+        last_frame=input_specs["last_frame"],
+        pre_gen=input_specs["pre_gen"]
+    )
+    model_inference = convert_variables_to_constants_v2(model_inference)
+    graph_def = model_inference.graph.as_graph_def()
+    for node in graph_def.node:
+        if node.name == model_inference.structured_outputs[0].op.name:
+            node.name = "output"
+            inputs_to_delete = [
+                inp for inp in node.input if inp[0] == "^"
+            ]
+            for inp in inputs_to_delete:
+                node.input.remove(inp)
+    return optimize_for_inference(graph_def, input_specs, output_specs)
+
+
+def convert_model_to_nchw(model: keras.Model,
+                          name: str = "final") -> keras.Model:
+    """Convert model from NHWC to NCHW."""
+    assert len(model.input) == 3
+    cur_frame = keras.Input(shape=np.array(
+        model.input[0].shape)[[3, 1, 2]], name="cur_frame")
+    last_frame = keras.Input(shape=np.array(
+        model.input[1].shape)[[3, 1, 2]], name="last_frame")
+    pre_gen = keras.Input(shape=np.array(
+        model.input[2].shape)[[3, 1, 2]], name="pre_gen")
+    cur_frame_pr = layers.Lambda(lambda x: K.permute_dimensions(
+        x, pattern=[0, 2, 3, 1]))(cur_frame)
+    last_frame_pr = layers.Lambda(lambda x: K.permute_dimensions(
+        x, pattern=[0, 2, 3, 1]))(last_frame)
+    pre_gen_pr = layers.Lambda(lambda x: K.permute_dimensions(
+        x, pattern=[0, 2, 3, 1]))(pre_gen)
+    output = model([cur_frame_pr, last_frame_pr, pre_gen_pr])
+    output = layers.Lambda(lambda x: K.permute_dimensions(
+        x, pattern=[0, 3, 1, 2]))(output)
+    output = layers.Layer(name="output")(output)
+    model = keras.Model(
+        inputs=[cur_frame, last_frame, pre_gen], outputs=output, name=name)
+    return model
 
 
 def main() -> int:

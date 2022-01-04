@@ -25,6 +25,6 @@ def create_onnx_model(config_path: str, weight_path: str,
         "cur_frame": [1] + list(model.input[0].shape)[1:],
         "last_frame": [1] + list(model.input[1].shape)[1:],
         "pre_gen": [1] + list(model.input[2].shape)[1:],
-    })
+    }, check_n=3)
     assert check
     return model_proto
