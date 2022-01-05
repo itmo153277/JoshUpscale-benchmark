@@ -121,9 +121,7 @@ int main(int argc, char *argv[]) {
 		if (!benchmarkConfig.profileTag.empty()) {
 			profilePath /= benchmarkConfig.profileTag;
 		}
-		if (!std::filesystem::create_directories(profilePath)) {
-			throw std::runtime_error("Cannot create profile directory");
-		}
+		std::filesystem::create_directories(profilePath);
 		benchmark::benchmark(
 		    backend.get(), lowResImgs, hiResImgs, profilePath.c_str());
 	} catch (...) {

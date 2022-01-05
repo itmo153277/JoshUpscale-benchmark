@@ -1,5 +1,6 @@
 // Copyright 2021 Ivanov Viktor
 
+#include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -37,6 +38,8 @@ TensorflowBackend::TensorflowBackend(const config::TensorflowConfig &config,
 	    m_InputOps[1].oper == nullptr || m_InputOps[2].oper == nullptr) {
 		throw std::invalid_argument("Invalid op name");
 	}
+	assert(m_OutputShape[0] == 1);
+	m_OutputShape.erase(m_OutputShape.begin());
 }
 
 Tensor<float> TensorflowBackend::forwardPass(const Tensor<float> &input) {
