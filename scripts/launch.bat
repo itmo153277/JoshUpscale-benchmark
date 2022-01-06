@@ -11,16 +11,23 @@ REM path %WINDIR%;%WINDIR%\system32;%WINDIR%\system32\wbem
 path %CD%\bin;%PATH%
 
 set ScriptName=%~nx0
+set ScriptTitle=JoshUpscale Benchmark
 
 if not "%~1" == "/logging" goto SetupLogging
 set logTimestamp=%~2
-shift /2
+shift
+shift
 
-title JoshUpscale Benchmark
+title %ScriptTitle%
 
 mkdir profiles\%logTimestamp%
 
 :: Benchmark start
+
+if not "%~1" == "" (
+  call :Benchmark "%~f1"
+  goto Success
+)
 
 for /F "eol=; delims=" %%a in (benchmark-list.conf) do (
   call :Benchmark %%a
@@ -43,12 +50,14 @@ pause >nul
 goto :EOF
 
 :Benchmark
+title %ScriptTitle% - %*
 set CUDA_ROOT=%CD%
 set CUDA_HOME=%CD%
 set CUDA_VISIBLE_DEVICES=0
 set TF_CPP_MIN_LOG_LEVEL=0
 set TF_CPP_VMODULE=
 call :Execute benchmark --profile-path profiles\%logTimestamp% %*
+title %ScriptTitle%
 goto :EOF
 
 :GenLogTimestamp
@@ -119,6 +128,7 @@ exit
 :Error
 call :Echo Error %ErrorLevel%
 (
+  title %ScriptTitle%
   endlocal
   exit %ErrorLevel%
 )
