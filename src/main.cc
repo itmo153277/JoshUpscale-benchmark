@@ -12,6 +12,7 @@
 #include "benchmark/benchmark.h"
 #include "benchmark/cmdline.h"
 #include "benchmark/config.h"
+#include "benchmark/logging.h"
 #include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
@@ -115,6 +116,7 @@ int main(int argc, char *argv[]) {
 		config::BenchmarkConfig benchmarkConfig =
 		    config::readConfig(configPath.c_str());
 		auto [lowResImgs, hiResImgs] = readData(benchmarkConfig.dataConfig);
+		LOG_INFO << "Loading backend";
 		auto backend = backend::createBackend(
 		    benchmarkConfig.backendConfig, lowResImgs, hiResImgs);
 		std::filesystem::path profilePath = argState.profilePath;
@@ -125,7 +127,7 @@ int main(int argc, char *argv[]) {
 		benchmark::benchmark(backend.get(), lowResImgs, hiResImgs,
 		    benchmarkConfig.numIterations, profilePath.c_str());
 	} catch (...) {
-		std::clog << "Exception: " << benchmark::getExceptionString()
+		std::cerr << "Exception: " << benchmark::getExceptionString()
 		          << std::endl;
 		return 1;
 	}

@@ -11,6 +11,7 @@
 #include <fstream>
 #include <new>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "benchmark/tensor.h"
@@ -51,11 +52,10 @@ struct PngStruct {
 	}
 	PngStruct &operator=(const PngStruct &) = delete;
 	PngStruct &operator=(PngStruct &&s) noexcept {
-		::png_destroy_read_struct(&pngPtr, &pngInfoPtr, nullptr);
-		pngPtr = s.pngPtr;
-		pngInfoPtr = s.pngInfoPtr;
-		s.pngPtr = nullptr;
-		s.pngInfoPtr = nullptr;
+		if (this != &s) {
+			this->~PngStruct();
+			new (this) PngStruct(std::move(s));
+		}
 		return *this;
 	}
 };

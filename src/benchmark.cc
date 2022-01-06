@@ -4,11 +4,11 @@
 
 #include <cstddef>
 #include <iostream>
-#include <sstream>
 #include <vector>
 
 #include "benchmark/backend.h"
 #include "benchmark/data.h"
+#include "benchmark/logging.h"
 #include "benchmark/tensor.h"
 #include "benchmark/timer.h"
 #include "benchmark/utils.h"
@@ -22,26 +22,24 @@ void benchmark(backend::Backend *backend, const Tensor<float> &lowResImgs,
 	auto lowResImgArray = unbatch(lowResImgs);
 
 	{
-		std::clog << "Begin warmup" << std::endl;
+		LOG_INFO << "Begin warmup";
 		for (auto &img : lowResImgArray) {
 			backend->forwardPass(img);
 		}
-		std::clog << "End warmup" << std::endl;
+		LOG_INFO << "End warmup";
 	}
 
 	{
 		TIMED_W_TAG("benchmark");
-		std::clog << "Begin benchmark" << std::endl;
+		LOG_INFO << "Begin benchmark";
 		for (std::size_t i = 0; i < numIterations; ++i) {
-			std::ostringstream ss;
-			ss << "Iteration " << (i + 1);
-			TIMED_W_TAG(ss.str());
+			TIMED_W_TAG(formatString("Iteration %zu", i + 1));
 			std::vector<timer::timestamp> timestmaps;
 			timestmaps.reserve(lowResImgArray.size());
 			auto start = timer::clock::now();
 			for (auto &img : lowResImgArray) {
 				backend->forwardPass(img);
-				timestmaps.emplace_back(timer::clock::now());
+				timestmaps.push_back(timer::clock::now());
 			}
 			for (auto &ts : timestmaps) {
 				std::clog << timer::TimestampPrinter(start, ts) << ' ';
@@ -49,22 +47,22 @@ void benchmark(backend::Backend *backend, const Tensor<float> &lowResImgs,
 			}
 			std::clog << std::endl;
 		}
-		std::clog << "End benchmark" << std::endl;
+		LOG_INFO << "End benchmark";
 	}
 
 	{
-		std::clog << "Calculating loss" << std::endl;
+		LOG_INFO << "Calculating loss";
 		std::vector<Tensor<float>> outImgArray;
 		outImgArray.reserve(lowResImgArray.size());
 		for (auto &img : lowResImgArray) {
-			outImgArray.emplace_back(backend->forwardPass(img));
+			outImgArray.push_back(backend->forwardPass(img));
 		}
 		auto diff = data::diff(hiResImgs, batch(outImgArray));
-		std::clog << "Difference: " << diff << std::endl;
+		LOG_INFO << "Difference: " << diff;
 	}
 
 	{
-		std::clog << "Profiling" << std::endl;
+		LOG_INFO << "Profiling";
 		backend->profile(lowResImgArray[0], profilePath);
 	}
 }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 
+#include "benchmark/logging.h"
 #include "benchmark/utils.h"
 
 namespace benchmark {
@@ -45,8 +46,7 @@ public:
 
 	~Timer() {
 		timestamp end = clock::now();
-		std::clog << m_Tag << ": " << TimestampPrinter(m_Start, end)
-		          << std::endl;
+		logInfo("timer") << m_Tag << ": " << TimestampPrinter(m_Start, end);
 	}
 
 private:
@@ -60,7 +60,7 @@ private:
 #define TIMER_NAME(X) TIMER_NAME_IMPL(_benchmark__timer_, X)
 #define TIMED_W_TAG(tag)                             \
 	::benchmark::timer::Timer TIMER_NAME(__LINE__) { \
-		tag                                          \
+		(tag)                                        \
 	}
 #define TIMED TIMED_W_TAG(FUNCTION_NAME)
 

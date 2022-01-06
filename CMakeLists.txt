@@ -9,6 +9,10 @@ find_package(TensorRT REQUIRED)
 find_package(tensorflow REQUIRED)
 find_package(onnxruntime REQUIRED)
 
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 option(ENABLE_LINT "Enable linting" OFF)
 if(ENABLE_LINT)
   if(MSVC)
