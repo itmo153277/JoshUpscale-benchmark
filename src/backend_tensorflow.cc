@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <vector>
 
 #include "benchmark/backends/tensorflow.h"
 #include "benchmark/config.h"
@@ -40,6 +41,8 @@ TensorflowBackend::TensorflowBackend(const config::TensorflowConfig &config,
 	}
 	assert(m_OutputShape[0] == 1);
 	m_OutputShape.erase(m_OutputShape.begin());
+	TensorflowBackend::forwardPass(
+	    {inputShape, std::vector<float>(m_InputTensor.size())});
 }
 
 Tensor<float> TensorflowBackend::forwardPass(const Tensor<float> &input) {

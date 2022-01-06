@@ -255,6 +255,9 @@ public:
 		return reinterpret_cast<float *>(::TF_TensorData(m_Tensor)) +
 		       ::TF_TensorElementCount(m_Tensor);
 	}
+	std::size_t size() const {
+		return static_cast<std::size_t>(::TF_TensorElementCount(m_Tensor));
+	}
 
 	static TF_Tensor own(::TF_Tensor *tensor) {
 		return TF_Tensor(tensor);

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <optional>
@@ -63,6 +64,7 @@ struct BenchmarkConfig {
 	DataConfig dataConfig;
 	BackendConfig backendConfig;
 	std::string profileTag;
+	std::size_t numIterations;
 };
 
 BenchmarkConfig readConfig(const path_type *configPath);

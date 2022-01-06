@@ -174,7 +174,8 @@ BenchmarkConfig deserialize<BenchmarkConfig>(const YAML::Node &node) {
 	try {
 		return {deserialize<DataConfig>(node["DataConfig"]),
 		    deserialize<BackendConfig>(node["BackendConfig"]),
-		    node["ProfileTag"].as<std::string>("")};
+		    node["ProfileTag"].as<std::string>(""),
+		    node["NumIterations"].as<std::size_t>(10)};
 	} catch (...) {
 		throw_with_nested_id(ConfigParseException());
 	}

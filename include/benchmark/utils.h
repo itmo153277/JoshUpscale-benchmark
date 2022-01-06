@@ -10,6 +10,16 @@
 #include <typeinfo>
 #include <utility>
 
+#ifndef FUNCTION_NAME
+#if defined(__GNUC__)
+#define FUNCTION_NAME __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define FUNCTION_NAME __FUNCSIG__
+#else
+#define FUNCTION_NAME __func__
+#endif
+#endif
+
 namespace benchmark {
 
 using path_type = std::filesystem::path::value_type;
