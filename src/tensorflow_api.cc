@@ -52,7 +52,7 @@ TF_Tensor<float> TF_Session::run(const std::vector<::TF_Output> &inputOp,
     bool profile, ::TF_Buffer *runMetadata) {
 	TF_Status status;
 	::TF_Tensor *outputValue = nullptr;
-	TF_BufferUnmanaged runOptions;
+	TF_BufferUnmanaged runOptions{nullptr};
 	if (profile) {
 		runOptions = TF_BufferUnmanaged::own(
 		    ::TF_CreateRunOptions(static_cast<char>(true)));
