@@ -4,7 +4,7 @@
 """Script for loading tensorflow models."""
 
 import sys
-from typing import Dict
+from typing import Callable, Dict, Optional
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -179,6 +179,29 @@ def convert_model_to_nchw(model: keras.Model,
     model = keras.Model(
         inputs=[cur_frame, last_frame, pre_gen], outputs=output, name=name)
     return model
+
+
+def convert_to_trt(
+    graph: tf.compat.v1.GraphDef,
+    precision_mode: str,
+    calibration_feed_fn: Optional[Callable[[], Dict[str, any]]] = None,
+    calibration_num_runs: int = 1
+) -> tf.compat.v1.GraphDef:
+    """Convert graph to TF-TRT."""
+    # pylint: disable=import-outside-toplevel
+
+    from tensorflow.python.compiler.tensorrt import trt_convert as trt
+
+    converter = trt.TrtGraphConverter(input_graph_def=graph,
+                                      nodes_denylist=["output"],
+                                      is_dynamic_op=True,
+                                      precision_mode=precision_mode)
+    trt_graph = converter.convert()
+    if calibration_feed_fn is not None:
+        trt_graph = converter.calibrate(fetch_names=["output"],
+                                        feed_dict_fn=calibration_feed_fn,
+                                        num_runs=calibration_num_runs)
+    return trt_graph
 
 
 def main() -> int:
