@@ -34,6 +34,7 @@ def optimize_for_inference(graph_def: tf.compat.v1.GraphDef,
     # pylint: disable=import-outside-toplevel
     # pylint: disable=not-context-manager
 
+    from tensorflow.python.framework import tensor_util
     from tensorflow.python.grappler import tf_optimizer
     from tensorflow.python.training.saver import export_meta_graph
     from tensorflow.python.tools.optimize_for_inference_lib import \
@@ -82,6 +83,30 @@ def optimize_for_inference(graph_def: tf.compat.v1.GraphDef,
         list(output_info.keys()),
         [x.dtype.as_datatype_enum for x in input_info.values()]
     )
+    node_dict = {
+        x.name: x
+        for x in optimized_graph_def.node
+    }
+    for node in optimized_graph_def.node:
+        if node.op != "BiasAdd":
+            continue
+        if node.input[1] not in node_dict:
+            continue
+        node_c = node_dict[node.input[1]]
+        if node_c.op != "Const":
+            continue
+        if node_c.attr["dtype"].type == node.attr["T"].type:
+            continue
+        # Fixing bias type
+        value = tensor_util.MakeNdarray(node_c.attr["value"].tensor)
+        node_c.attr["dtype"].type = node.attr["T"].type
+        node_c.attr["value"].CopyFrom(tf.compat.v1.AttrValue(
+            tensor=tensor_util.make_tensor_proto(
+                value,
+                node.attr["T"].type,
+                value.shape
+            )
+        ))
     return optimized_graph_def
 
 
