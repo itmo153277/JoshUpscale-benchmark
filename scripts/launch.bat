@@ -15,27 +15,31 @@ set ScriptTitle=JoshUpscale Benchmark
 
 if not "%~1" == "/logging" goto SetupLogging
 set logTimestamp=%~2
-shift
-shift
+shift /0
+shift /0
 
 title %ScriptTitle%
 
+:Main
+
 mkdir profiles\%logTimestamp%
 
-:: Benchmark start
-
-if not "%~1" == "" (
-  call :Benchmark "%~f1"
-  goto Success
-)
+if not "%~1" == "" goto FromCmdline
 
 for /F "eol=; delims=" %%a in (benchmark-list.conf) do (
   call :Benchmark %%a
 )
 
-:: Benchmark end
-
 goto Success
+
+:FromCmdline
+
+if "%~1" == "" goto Success
+
+call :Benchmark %1
+
+shift
+goto FromCmdline
 
 :SetupLogging
 call :GenLogTimestamp
@@ -56,6 +60,7 @@ set CUDA_HOME=%CD%
 set CUDA_VISIBLE_DEVICES=0
 set TF_CPP_MIN_LOG_LEVEL=0
 set TF_CPP_VMODULE=
+set OMP_NUM_THREADS=%NUMBER_OF_PROCESSORS%
 call :Execute benchmark --profile-path profiles\%logTimestamp% %*
 title %ScriptTitle%
 goto :EOF
