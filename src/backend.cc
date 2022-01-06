@@ -14,13 +14,13 @@ namespace benchmark {
 namespace backend {
 
 std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,
-    const Tensor<float> &examples, const TensorShape &outShape) {
+    const Tensor<float> &examples, const Tensor<float> &exampleOut) {
 	switch (config.backendType) {
 	case config::BackendType::TENSORFLOW: {
-		TensorShape inputShape(examples.shape.begin(), examples.shape.end());
-		TensorShape outputShape(outShape.begin(), outShape.end());
+		TensorShape inputShape = examples.shape;
+		TensorShape outputShape = exampleOut.shape;
 		inputShape[0] = 1;
-		outputShape.insert(outputShape.begin(), 1);
+		outputShape[0] = 1;
 		return std::make_unique<TensorflowBackend>(
 		    config.tensorflowConfig.value(), inputShape, outputShape);
 	}

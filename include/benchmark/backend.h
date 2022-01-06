@@ -23,7 +23,7 @@ public:
 };
 
 std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,
-    const Tensor<float> &examples, const TensorShape &outShape);
+    const Tensor<float> &examples, const Tensor<float> &exampleOut);
 
 }  // namespace backend
 

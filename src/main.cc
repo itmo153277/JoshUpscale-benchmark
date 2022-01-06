@@ -115,8 +115,8 @@ int main(int argc, char *argv[]) {
 		config::BenchmarkConfig benchmarkConfig =
 		    config::readConfig(configPath.c_str());
 		auto [lowResImgs, hiResImgs] = readData(benchmarkConfig.dataConfig);
-		auto backend = backend::createBackend(benchmarkConfig.backendConfig,
-		    lowResImgs, benchmarkConfig.dataConfig.hiResShape);
+		auto backend = backend::createBackend(
+		    benchmarkConfig.backendConfig, lowResImgs, hiResImgs);
 		std::filesystem::path profilePath = argState.profilePath;
 		if (!benchmarkConfig.profileTag.empty()) {
 			profilePath /= benchmarkConfig.profileTag;
