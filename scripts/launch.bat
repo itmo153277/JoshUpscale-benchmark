@@ -6,9 +6,8 @@ if errorlevel 1 goto Unsupported
 wmic Alias /? >nul 2>&1 
 if errorlevel 1 goto Unsupported
 
-cd /d "%~dp0"
 REM path %WINDIR%;%WINDIR%\system32;%WINDIR%\system32\wbem
-path %CD%\bin;%PATH%
+path %~dp0\bin;%PATH%
 
 set ScriptName=%~nx0
 set ScriptTitle=JoshUpscale Benchmark
@@ -55,8 +54,8 @@ goto :EOF
 
 :Benchmark
 title %ScriptTitle% - %*
-set CUDA_ROOT=%CD%
-set CUDA_HOME=%CD%
+set CUDA_ROOT=%~dp0
+set CUDA_HOME=%~dp0
 set CUDA_VISIBLE_DEVICES=0
 set TF_CPP_MIN_LOG_LEVEL=0
 set TF_CPP_VMODULE=
