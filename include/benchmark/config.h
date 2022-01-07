@@ -44,7 +44,13 @@ struct TensorflowConfig {
 
 struct OnnxruntimeConfig {
 	std::filesystem::path modelFileName;
+	std::vector<std::string> inputOps;
+	std::string outputOp;
 	bool enableTensorRT;
+	bool enableTensorRTFP16;
+	bool enableTensorRTINT8;
+	std::string tensorRTCachePath;
+	std::string tensorRTCalibrationTable;
 };
 
 struct TensorRTConfig {

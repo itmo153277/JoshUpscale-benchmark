@@ -6,7 +6,7 @@ if errorlevel 1 goto Unsupported
 wmic Alias /? >nul 2>&1 
 if errorlevel 1 goto Unsupported
 
-REM path %WINDIR%;%WINDIR%\system32;%WINDIR%\system32\wbem
+path %WINDIR%;%WINDIR%\system32;%WINDIR%\system32\wbem
 path %~dp0\bin;%PATH%
 
 set ScriptName=%~nx0
@@ -20,8 +20,6 @@ shift /0
 title %ScriptTitle%
 
 :Main
-
-mkdir profiles\%logTimestamp%
 
 if not "%~1" == "" goto FromCmdline
 
@@ -46,6 +44,7 @@ call :Echo JoshUpscale model benchmark
 Call :Tool 7z.exe "%ProgramFiles%\7-Zip"
 call :Echo Logging to: %~dp0logs\%logTimestamp%.log
 call "%~f0" /logging %logTimestamp% %* 2>&1 | tee "%~dp0logs\%logTimestamp%.log"
+cd /d "%~dp0"
 7z a -mx9 "%logTimestamp%.zip" "logs\%logTimestamp%.log" "profiles\%logTimestamp%" >nul
 call :Echo Archive path: %logTimestamp%.zip
 endlocal
@@ -60,7 +59,10 @@ set CUDA_VISIBLE_DEVICES=0
 set TF_CPP_MIN_LOG_LEVEL=0
 set TF_CPP_VMODULE=
 set OMP_NUM_THREADS=%NUMBER_OF_PROCESSORS%
-call :Execute benchmark --profile-path profiles\%logTimestamp% %*
+set configFile=%~f1
+pushd %~dp0
+call :Execute benchmark --profile-path profiles\%logTimestamp% "%configFile%"
+popd
 title %ScriptTitle%
 goto :EOF
 

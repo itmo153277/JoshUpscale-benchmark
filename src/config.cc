@@ -85,7 +85,13 @@ OnnxruntimeConfig deserialize<OnnxruntimeConfig>(const YAML::Node &node) {
 	}
 	try {
 		return {node["ModelFileName"].as<std::string>(),
-		    node["EnableTensorRT"].as<bool>(false)};
+		    node["InputOps"].as<std::vector<std::string>>(),
+		    node["OutputOp"].as<std::string>(),
+		    node["EnableTensorRT"].as<bool>(false),
+		    node["EnableTensorRTFP16"].as<bool>(false),
+		    node["EnableTensorRTINT8"].as<bool>(false),
+		    node["TensorRTCachePath"].as<std::string>(""),
+		    node["TensorRTCalibrationTable"].as<std::string>("")};
 	} catch (...) {
 		throw_with_nested_id(
 		    ConfigParseException("Failed to parse onnxruntime backend config"));

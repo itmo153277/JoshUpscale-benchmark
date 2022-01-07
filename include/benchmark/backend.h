@@ -19,8 +19,6 @@ public:
 	}
 
 	virtual Tensor<float> forwardPass(const Tensor<float> &input) = 0;
-	virtual Tensor<float> profile(const Tensor<float> &input,
-	    const path_type *savePath, const std::string &tag) = 0;
 };
 
 std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,

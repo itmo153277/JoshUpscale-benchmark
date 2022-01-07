@@ -16,8 +16,7 @@
 namespace benchmark {
 
 void benchmark(backend::Backend *backend, const Tensor<float> &lowResImgs,
-    const Tensor<float> &hiResImgs, std::size_t numIterations,
-    const path_type *profilePath) {
+    const Tensor<float> &hiResImgs, std::size_t numIterations) {
 	TIMED;
 	auto lowResImgArray = unbatch(lowResImgs);
 
@@ -59,14 +58,6 @@ void benchmark(backend::Backend *backend, const Tensor<float> &lowResImgs,
 		}
 		auto diff = data::diff(hiResImgs, batch(outImgArray));
 		LOG_INFO << "Difference: " << diff;
-	}
-
-	{
-		LOG_INFO << "Profiling";
-		for (int i = 0; i < 5; ++i) {
-			backend->profile(
-			    lowResImgArray[i], profilePath, formatString("run-%02d", i));
-		}
 	}
 }
 

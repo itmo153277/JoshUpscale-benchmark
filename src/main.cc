@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 		}
 		std::filesystem::create_directories(profilePath);
 		benchmark::benchmark(backend.get(), lowResImgs, hiResImgs,
-		    benchmarkConfig.numIterations, profilePath.c_str());
+		    benchmarkConfig.numIterations);
 	} catch (...) {
 		std::cerr << "Exception: " << benchmark::getExceptionString()
 		          << std::endl;

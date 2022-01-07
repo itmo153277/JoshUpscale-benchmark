@@ -56,25 +56,6 @@ Tensor<float> TensorflowBackend::forwardPass(const Tensor<float> &input) {
 	    std::vector<float>(m_PreGenTensor.begin(), m_PreGenTensor.end())};
 }
 
-Tensor<float> TensorflowBackend::profile(const Tensor<float> &input,
-    const path_type *savePath, const std::string &tag) {
-	auto profileFileName =
-	    std::filesystem::path(savePath) / (tag + "-profile.proto");
-	std::ofstream profileFile(
-	    profileFileName.c_str(), std::ofstream::binary | std::ofstream::out);
-	profileFile.exceptions(std::ofstream::badbit | std::ofstream::failbit);
-	tf::TF_BufferUnmanaged runMetadata;
-	m_InputTensor.copyFromTensor(input);
-	m_PreGenTensor = m_Session.run(m_InputOps,
-	    {m_InputTensor, m_LastFrameTensor, m_PreGenTensor}, m_OutputOp, true,
-	    runMetadata);
-	profileFile.write(reinterpret_cast<const char *>(runMetadata->data),
-	    static_cast<std::streamsize>(runMetadata->length));
-	m_LastFrameTensor.copyFromTensor(m_InputTensor);
-	return {m_OutputShape,
-	    std::vector<float>(m_PreGenTensor.begin(), m_PreGenTensor.end())};
-}
-
 }  // namespace backend
 
 }  // namespace benchmark
