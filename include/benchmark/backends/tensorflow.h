@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "benchmark/backend.h"
@@ -22,8 +23,8 @@ public:
 	    const TensorShape &inputShape, const TensorShape &outputShape);
 
 	Tensor<float> forwardPass(const Tensor<float> &input) override;
-	Tensor<float> profile(
-	    const Tensor<float> &input, const path_type *savePath) override;
+	Tensor<float> profile(const Tensor<float> &input, const path_type *savePath,
+	    const std::string &tag) override;
 
 private:
 	tf::TF_Graph m_Graph;

@@ -63,7 +63,10 @@ void benchmark(backend::Backend *backend, const Tensor<float> &lowResImgs,
 
 	{
 		LOG_INFO << "Profiling";
-		backend->profile(lowResImgArray[0], profilePath);
+		for (int i = 0; i < 5; ++i) {
+			backend->profile(
+			    lowResImgArray[i], profilePath, formatString("run-%02d", i));
+		}
 	}
 }
 

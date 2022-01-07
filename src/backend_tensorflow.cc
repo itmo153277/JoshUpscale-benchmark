@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "benchmark/backends/tensorflow.h"
@@ -54,9 +55,11 @@ Tensor<float> TensorflowBackend::forwardPass(const Tensor<float> &input) {
 	return {m_OutputShape,
 	    std::vector<float>(m_PreGenTensor.begin(), m_PreGenTensor.end())};
 }
-Tensor<float> TensorflowBackend::profile(
-    const Tensor<float> &input, const path_type *savePath) {
-	auto profileFileName = std::filesystem::path(savePath) / "profile.proto";
+
+Tensor<float> TensorflowBackend::profile(const Tensor<float> &input,
+    const path_type *savePath, const std::string &tag) {
+	auto profileFileName =
+	    std::filesystem::path(savePath) / (tag + "-profile.proto");
 	std::ofstream profileFile(
 	    profileFileName.c_str(), std::ofstream::binary | std::ofstream::out);
 	profileFile.exceptions(std::ofstream::badbit | std::ofstream::failbit);
