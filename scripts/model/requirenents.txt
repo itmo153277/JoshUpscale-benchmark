@@ -5,3 +5,5 @@ onnx
 tf2onnx==1.9.3
 onnxruntime==1.10.0
 onnxoptimizer
+onnxconverter_common
+opencv-python-headless

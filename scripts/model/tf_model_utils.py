@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
 """Script for loading tensorflow models."""
 
-import sys
 from typing import Callable, Dict, Optional
 import numpy as np
 import tensorflow as tf
@@ -181,6 +179,24 @@ def convert_model_to_nchw(model: keras.Model,
     return model
 
 
+def create_calibration_fn(
+    hr_data: np.array,
+    lr_data: np.array
+) -> Callable[[], Dict[str, any]]:
+    """Create function for calibration."""
+    i_iter = iter(range(hr_data.shape[0] - 1))
+
+    def calibration_fn():
+        i = next(i_iter)
+        return {
+            "cur_frame:0": lr_data[[i + 1]],
+            "last_frame:0": lr_data[[i]],
+            "pre_gen:0": hr_data[[i]]
+        }
+
+    return calibration_fn
+
+
 def convert_to_trt(
     graph: tf.compat.v1.GraphDef,
     precision_mode: str,
@@ -195,6 +211,7 @@ def convert_to_trt(
     converter = trt.TrtGraphConverter(input_graph_def=graph,
                                       nodes_denylist=["output"],
                                       is_dynamic_op=True,
+                                      minimum_segment_size=5,
                                       precision_mode=precision_mode)
     trt_graph = converter.convert()
     if calibration_feed_fn is not None:
@@ -202,12 +219,3 @@ def convert_to_trt(
                                         feed_dict_fn=calibration_feed_fn,
                                         num_runs=calibration_num_runs)
     return trt_graph
-
-
-def main() -> int:
-    """Run CLI."""
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
