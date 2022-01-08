@@ -125,7 +125,7 @@ def create_inference_graph(model: keras.Model) -> tf.compat.v1.GraphDef:
 
     input_specs = {
         x.name: tf.TensorSpec(
-            x.shape,
+            [1] + list(x.shape)[1:],
             x.dtype
         ) for x in model.input
     }
@@ -211,6 +211,7 @@ def convert_to_trt(
     converter = trt.TrtGraphConverter(input_graph_def=graph,
                                       nodes_denylist=["output"],
                                       is_dynamic_op=True,
+                                      max_batch_size=None,
                                       minimum_segment_size=5,
                                       precision_mode=precision_mode)
     trt_graph = converter.convert()
