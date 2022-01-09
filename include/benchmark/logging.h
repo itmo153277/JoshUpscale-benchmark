@@ -56,7 +56,12 @@ inline logging::LogInterface logWarn(const char *tag) {
 	return {tag, "WARNING"};
 }
 
+inline logging::LogInterface logError(const char *tag) {
+	return {tag, "ERROR"};
+}
+
 #define LOG_INFO ::benchmark::logInfo(__func__)
 #define LOG_WARN ::benchmark::logWarn(__func__)
+#define LOG_ERROR ::benchmark::logError(__func__)
 
 }  // namespace benchmark

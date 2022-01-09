@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <fstream>
-#include <iostream>
+#include <ios>
 
 #include "benchmark/tensorflow/api.h"
 #include "benchmark/utils.h"

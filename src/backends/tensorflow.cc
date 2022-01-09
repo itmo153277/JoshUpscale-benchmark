@@ -1,5 +1,7 @@
 // Copyright 2021 Ivanov Viktor
 
+#include "benchmark/backends/tensorflow.h"
+
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -7,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "benchmark/backends/tensorflow.h"
 #include "benchmark/config.h"
 #include "benchmark/tensor.h"
 #include "benchmark/utils.h"

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <ios>
 #include <new>
 #include <stdexcept>
 #include <utility>
@@ -61,8 +62,8 @@ struct PngStruct {
 };
 
 Tensor<std::uint8_t> readPng(const char *fileName) {
-	std::ifstream pngFile(fileName, std::ifstream::in | std::ifstream::binary);
-	pngFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	std::ifstream pngFile(fileName, std::ios::in | std::ios::binary);
+	pngFile.exceptions(std::ios::failbit | std::ios::badbit);
 	char header[kPngSignatureSize];
 	pngFile.read(header, sizeof(header));
 	if (::png_sig_cmp(reinterpret_cast<::png_const_bytep>(header), 0,

@@ -1,8 +1,9 @@
 // Copyright 2021 Ivanov Viktor
 
+#include "benchmark/backends/onnxruntime.h"
+
 #include <cstring>
 
-#include "benchmark/backends/onnxruntime.h"
 #include "benchmark/onnxruntime/api.h"
 #include "benchmark/tensor.h"
 

@@ -12,7 +12,7 @@
 #include <cstddef>
 #include <exception>
 #include <fstream>
-#include <iostream>
+#include <ios>
 #include <sstream>
 #include <string>
 
@@ -122,7 +122,8 @@ TensorRTConfig deserialize<TensorRTConfig>(const YAML::Node &node) {
 	try {
 		return {node["ModelFileName"].as<std::string>(),
 		    node["EnableFP16"].as<bool>(false),
-		    node["EnableINT8"].as<bool>(false)};
+		    node["EnableINT8"].as<bool>(false),
+		    node["MaxWorkspaceSizeBytes"].as<std::size_t>(0)};
 	} catch (...) {
 		throw_with_nested_id(
 		    ConfigParseException("Failed to parse TensorRT backend config"));

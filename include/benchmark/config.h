@@ -17,8 +17,7 @@ namespace benchmark {
 
 namespace config {
 
-class ConfigParseException : public std::exception {
-public:
+struct ConfigParseException : std::exception {
 	ConfigParseException() : std::exception("Failed to parse config") {
 	}
 	explicit ConfigParseException(const char *msg) : std::exception(msg) {
@@ -57,6 +56,7 @@ struct TensorRTConfig {
 	std::filesystem::path modelFileName;
 	bool enableFP16;
 	bool enableINT8;
+	std::size_t maxWorkspaceSizeBytes;
 };
 
 struct BackendConfig {

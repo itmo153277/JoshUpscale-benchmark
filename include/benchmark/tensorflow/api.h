@@ -43,18 +43,10 @@ namespace benchmark {
 
 namespace tensorflow {
 
-class TF_Exception : public std::exception {
-public:
+struct TF_Exception : std::exception {
 	explicit TF_Exception(const ::TF_Status *status)
-	    : m_Msg(::TF_Message(status)) {
+	    : std::exception(::TF_Message(status)) {
 	}
-
-	const char *what() const noexcept override {
-		return m_Msg.c_str();
-	}
-
-private:
-	std::string m_Msg;
 };
 
 #define DEFINE_SMART_TF_CLASS(TF_Class, TF_Constructor, TF_Destructor)  \

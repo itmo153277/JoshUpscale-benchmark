@@ -12,20 +12,14 @@ namespace benchmark {
 
 namespace cmdline {
 
-class ArgParseException : public std::exception {
-public:
-	ArgParseException() : ArgParseException("Error during argument parsing") {
+struct ArgParseException : std::exception {
+	ArgParseException() : std::exception("Error during argument parsing") {
 	}
-	explicit ArgParseException(const std::string &msg) : m_msg(msg) {
+	explicit ArgParseException(const std::string &msg)
+	    : std::exception(msg.c_str()) {
 	}
-	explicit ArgParseException(const char *msg) : m_msg(msg) {
+	explicit ArgParseException(const char *msg) : std::exception(msg) {
 	}
-	const char *what() const noexcept override {
-		return m_msg.c_str();
-	}
-
-private:
-	std::string m_msg;
 };
 
 enum class ArgType { BOOL, STRING };
