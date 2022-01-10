@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(PNG REQUIRED)
 find_package(yaml-cpp 0.7.0 REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 find_package(TensorRT REQUIRED)
 find_package(tensorflow REQUIRED)
 find_package(onnxruntime REQUIRED)
@@ -36,6 +37,7 @@ target_include_directories(benchmark PRIVATE include)
 target_link_libraries(benchmark PRIVATE
   PNG::PNG
   yaml-cpp
+  CUDA::cudart
   ${TensorRT_LIBS}
   tensorflow
   onnxruntime

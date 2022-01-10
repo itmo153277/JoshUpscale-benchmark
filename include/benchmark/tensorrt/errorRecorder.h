@@ -100,18 +100,22 @@ public:
 		return --m_RefCount;
 	}
 
-	[[noreturn]] void rethrowException(TrtException *e) {
+	[[noreturn]] void rethrowException() {
 		try {
-			std::unique_lock guard{m_Mutex};
-			if (m_HasValue) {
-				throw TrtException(m_ErrorDesc);
-			}
-		} catch (TrtException &) {
 			throw;
-		} catch (...) {
-			printException();
+		} catch (TrtException &e) {
+			try {
+				std::unique_lock guard{m_Mutex};
+				if (m_HasValue) {
+					throw TrtException(m_ErrorDesc);
+				}
+			} catch (TrtException &) {
+				throw;
+			} catch (...) {
+				printException();
+			}
+			throw e;
 		}
-		throw *e;
 	}
 
 private:

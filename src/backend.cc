@@ -17,25 +17,20 @@ namespace backend {
 
 std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,
     const Tensor<float> &examples, const Tensor<float> &exampleOut) {
+	TensorShape inputShape = examples.shape;
+	TensorShape outputShape = exampleOut.shape;
+	inputShape[0] = 1;
+	outputShape[0] = 1;
 	switch (config.backendType) {
-	case config::BackendType::TENSORFLOW: {
-		TensorShape inputShape = examples.shape;
-		TensorShape outputShape = exampleOut.shape;
-		inputShape[0] = 1;
-		outputShape[0] = 1;
+	case config::BackendType::TENSORFLOW:
 		return std::make_unique<TensorflowBackend>(
 		    config.tensorflowConfig.value(), inputShape, outputShape);
-	}
-	case config::BackendType::ONNXRUNTIME: {
-		TensorShape inputShape = examples.shape;
-		TensorShape outputShape = exampleOut.shape;
-		inputShape[0] = 1;
-		outputShape[0] = 1;
+	case config::BackendType::ONNXRUNTIME:
 		return std::make_unique<OnnxruntimeBackend>(
 		    config.onnxruntimeConfig.value(), inputShape, outputShape);
-	}
 	case config::BackendType::TENSORRT: {
-		return std::make_unique<TensorRTBackend>(config.tensorRTConfig.value());
+		return std::make_unique<TensorRTBackend>(
+		    config.tensorRTConfig.value(), inputShape, outputShape);
 	}
 	default:
 		throw std::invalid_argument("Unsupported backend type");

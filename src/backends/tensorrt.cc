@@ -2,10 +2,13 @@
 
 #include "benchmark/backends/tensorrt.h"
 
+#include <array>
 #include <cstddef>
 #include <fstream>
 #include <ios>
 #include <memory>
+#include <numeric>
+#include <utility>
 
 #include "benchmark/logging.h"
 #include "benchmark/tensorrt/api.h"
@@ -15,17 +18,28 @@ namespace benchmark {
 
 namespace backend {
 
-TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config) {
+TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config,
+    const TensorShape &inputShape, const TensorShape &outputShape)
+    : m_OutputShape(outputShape.begin() + 1, outputShape.end())
+    , m_InputSize{std::accumulate(inputShape.begin(), inputShape.end(),
+          std::size_t(1), std::multiplies<std::size_t>())}
+    , m_OutputSize{std::accumulate(outputShape.begin(), outputShape.end(),
+          std::size_t(1), std::multiplies<std::size_t>())}
+    , m_CurFrameTensor(m_InputSize)
+    , m_LastFrameTensor(m_InputSize)
+    , m_PreGenTensor(m_OutputSize)
+    , m_OutputTensor{m_OutputSize}
+    , m_Bindings{}
+    , m_Runtime{nvinfer1::createInferRuntime(m_Logger)}
+    , m_Engine{nullptr}
+    , m_Context{nullptr} {
 	try {
-		auto builder = trt::TrtPtr<nvinfer1::IBuilder>(
-		    nvinfer1::createInferBuilder(m_Logger));
+		auto builder = trt::TrtPtr(nvinfer1::createInferBuilder(m_Logger));
 		builder->setErrorRecorder(&m_ErrorRecorder);
-		auto builderConfig = trt::TrtPtr<nvinfer1::IBuilderConfig>(
-		    builder->createBuilderConfig());
-		auto network = trt::TrtPtr<nvinfer1::INetworkDefinition>(
-		    builder->createNetworkV2(1));
-		auto parser = trt::TrtPtr<nvonnxparser::IParser>(
-		    nvonnxparser::createParser(*network, m_Logger));
+		auto builderConfig = trt::TrtPtr(builder->createBuilderConfig());
+		auto network = trt::TrtPtr(builder->createNetworkV2(1));
+		auto parser =
+		    trt::TrtPtr(nvonnxparser::createParser(*network, m_Logger));
 		if (builder->getNbDLACores() > 0) {
 			LOG_INFO << "Using DLA";
 			builderConfig->setDefaultDeviceType(nvinfer1::DeviceType::kDLA);
@@ -63,16 +77,51 @@ TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config) {
 				throw trt::TrtParserException(*parser);
 			}
 		}
-		auto serializedEngine = trt::TrtPtr<nvinfer1::IHostMemory>(
+		auto serializedEngine = trt::TrtPtr(
 		    builder->buildSerializedNetwork(*network, *builderConfig));
-	} catch (trt::TrtException &e) {
-		m_ErrorRecorder.rethrowException(&e);
+		m_Engine = trt::TrtPtr(m_Runtime->deserializeCudaEngine(
+		    serializedEngine->data(), serializedEngine->size()));
+		std::array<std::pair<const char *, void *>, 4> names = {
+		    {{config.inputOps.at(0).c_str(), m_CurFrameTensor.get()},
+		        {config.inputOps.at(1).c_str(), m_LastFrameTensor.get()},
+		        {config.inputOps.at(2).c_str(), m_PreGenTensor.get()},
+		        {config.outputOp.c_str(), m_OutputTensor.get()}}};
+		for (auto &[name, ptr] : names) {
+			auto idx = m_Engine->getBindingIndex(name);
+			if (idx < 0) {
+				throw std::invalid_argument("Invalid node name");
+			}
+			m_Bindings[idx] = ptr;
+		}
+		m_Context = trt::TrtPtr(m_Engine->createExecutionContext());
+	} catch (...) {
+		m_ErrorRecorder.rethrowException();
 	}
 }
 
-Tensor<float> TensorRTBackend::forwardPass(
-    [[maybe_unused]] const Tensor<float> &input) {
-	return {};
+Tensor<float> TensorRTBackend::forwardPass(const Tensor<float> &input) {
+	try {
+		std::vector<float> result(m_OutputSize);
+		trt::cudaCheck(::cudaMemcpyAsync(m_CurFrameTensor.get(),
+		    input.data.data(), m_InputSize * sizeof(float),
+		    ::cudaMemcpyKind::cudaMemcpyHostToDevice, m_CudaStream));
+		if (!m_Context->enqueueV2(m_Bindings, m_CudaStream, nullptr)) {
+			throw trt::TrtException();
+		}
+		trt::cudaCheck(::cudaMemcpyAsync(m_LastFrameTensor.get(),
+		    m_CurFrameTensor.get(), m_InputSize * sizeof(float),
+		    ::cudaMemcpyKind::cudaMemcpyDeviceToDevice, m_CudaStream));
+		trt::cudaCheck(::cudaMemcpyAsync(m_PreGenTensor.get(),
+		    m_OutputTensor.get(), m_OutputSize * sizeof(float),
+		    ::cudaMemcpyKind::cudaMemcpyDeviceToDevice, m_CudaStream));
+		trt::cudaCheck(::cudaMemcpyAsync(result.data(), m_OutputTensor.get(),
+		    m_OutputSize * sizeof(float),
+		    ::cudaMemcpyKind::cudaMemcpyDeviceToHost, m_CudaStream));
+		trt::cudaCheck(::cudaStreamSynchronize(m_CudaStream));
+		return {m_OutputShape, std::move(result)};
+	} catch (...) {
+		m_ErrorRecorder.rethrowException();
+	}
 }
 
 }  // namespace backend

@@ -54,6 +54,8 @@ struct OnnxruntimeConfig {
 
 struct TensorRTConfig {
 	std::filesystem::path modelFileName;
+	std::vector<std::string> inputOps;
+	std::string outputOp;
 	bool enableFP16;
 	bool enableINT8;
 	std::size_t maxWorkspaceSizeBytes;
