@@ -83,8 +83,8 @@ struct TrtPtr : std::unique_ptr<T> {
 };
 
 template <typename T>
-struct CudaDeviceBuffer : std::unique_ptr<void, decltype(&::cudaFree)> {
-	using unique_ptr = std::unique_ptr<void, decltype(&::cudaFree)>;
+struct CudaDeviceBuffer : std::unique_ptr<float, decltype(&::cudaFree)> {
+	using unique_ptr = std::unique_ptr<float, decltype(&::cudaFree)>;
 
 	explicit CudaDeviceBuffer(std::size_t size)
 	    : unique_ptr(alloc(size), &::cudaFree) {
@@ -99,10 +99,10 @@ struct CudaDeviceBuffer : std::unique_ptr<void, decltype(&::cudaFree)> {
 	T *operator->() = delete;
 
 private:
-	static void *alloc(std::size_t size) {
+	static T *alloc(std::size_t size) {
 		void *result;
 		cudaCheck(::cudaMalloc(&result, size * sizeof(T)));
-		return result;
+		return reinterpret_cast<T *>(result);
 	}
 };
 

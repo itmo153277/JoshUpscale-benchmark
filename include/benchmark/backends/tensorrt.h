@@ -18,7 +18,8 @@ namespace backend {
 class TensorRTBackend : public Backend {
 public:
 	TensorRTBackend(const config::TensorRTConfig &config,
-	    const TensorShape &inputShape, const TensorShape &outputShape);
+	    const TensorShape &inputShape, const TensorShape &outputShape,
+	    const Tensor<float> &examples, const Tensor<float> &exampleOut);
 
 	Tensor<float> forwardPass(const Tensor<float> &input) override;
 
@@ -33,7 +34,6 @@ private:
 	trt::CudaDeviceBuffer<float> m_PreGenTensor;
 	trt::CudaDeviceBuffer<float> m_OutputTensor;
 	void *m_Bindings[4];
-	trt::TrtPtr<nvinfer1::IRuntime> m_Runtime;
 	trt::TrtPtr<nvinfer1::ICudaEngine> m_Engine;
 	trt::TrtPtr<nvinfer1::IExecutionContext> m_Context;
 	trt::CudaStream m_CudaStream;

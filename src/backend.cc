@@ -29,8 +29,8 @@ std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,
 		return std::make_unique<OnnxruntimeBackend>(
 		    config.onnxruntimeConfig.value(), inputShape, outputShape);
 	case config::BackendType::TENSORRT: {
-		return std::make_unique<TensorRTBackend>(
-		    config.tensorRTConfig.value(), inputShape, outputShape);
+		return std::make_unique<TensorRTBackend>(config.tensorRTConfig.value(),
+		    inputShape, outputShape, examples, exampleOut);
 	}
 	default:
 		throw std::invalid_argument("Unsupported backend type");
