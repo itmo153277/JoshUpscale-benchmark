@@ -33,8 +33,8 @@ TensorflowBackend::TensorflowBackend(const config::TensorflowConfig &config,
               0}}
     , m_OutputOp{::TF_GraphOperationByName(m_Graph, config.outputOp.c_str()), 0}
     , m_OutputShape(outputShape)
-    , m_InputTensor(inputShape)
-    , m_LastFrameTensor(inputShape)
+    , m_LowResTensors{tf::TF_Tensor<float>(inputShape),
+          tf::TF_Tensor<float>(inputShape)}
     , m_PreGenTensor(outputShape)
     , m_Session(m_Graph, &sessionOptions, config.enableXLA) {
 	if (m_OutputOp.oper == nullptr || m_InputOps[0].oper == nullptr ||
@@ -44,15 +44,17 @@ TensorflowBackend::TensorflowBackend(const config::TensorflowConfig &config,
 	assert(m_OutputShape[0] == 1);
 	m_OutputShape.erase(m_OutputShape.begin());
 	TensorflowBackend::forwardPass(
-	    {inputShape, std::vector<float>(m_InputTensor.size())});
+	    {inputShape, std::vector<float>(m_LowResTensors[0].size())});
 }
 
 Tensor<float> TensorflowBackend::forwardPass(const Tensor<float> &input) {
-	m_InputTensor.copyFromTensor(input);
+	auto idx0 = m_RotIndex;
+	auto idx1 = idx0 ^ 1;
+	m_RotIndex = idx1;
+	m_LowResTensors[idx0].copyFromTensor(input);
 	m_PreGenTensor = m_Session.run(m_InputOps,
-	    {m_InputTensor, m_LastFrameTensor, m_PreGenTensor}, m_OutputOp, false,
-	    nullptr);
-	m_LastFrameTensor.copyFromTensor(m_InputTensor);
+	    {m_LowResTensors[idx0], m_LowResTensors[idx1], m_PreGenTensor},
+	    m_OutputOp, false, nullptr);
 	return {m_OutputShape,
 	    std::vector<float>(m_PreGenTensor.begin(), m_PreGenTensor.end())};
 }

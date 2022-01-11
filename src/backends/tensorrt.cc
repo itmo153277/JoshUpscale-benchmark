@@ -2,7 +2,6 @@
 
 #include "benchmark/backends/tensorrt.h"
 
-#include <array>
 #include <cstddef>
 #include <fstream>
 #include <ios>
@@ -27,11 +26,9 @@ TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config,
           std::size_t(1), std::multiplies<std::size_t>())}
     , m_OutputSize{std::accumulate(outputShape.begin(), outputShape.end(),
           std::size_t(1), std::multiplies<std::size_t>())}
-    , m_CurFrameTensor(m_InputSize)
-    , m_LastFrameTensor(m_InputSize)
-    , m_PreGenTensor(m_OutputSize)
-    , m_OutputTensor{m_OutputSize}
-    , m_Bindings{}
+    , m_LowResTensors{trt::CudaDeviceBuffer<float>(m_InputSize),
+          trt::CudaDeviceBuffer<float>(m_InputSize)}
+    , m_HiResTensor(m_OutputSize)
     , m_Engine{nullptr}
     , m_Context{nullptr} {
 	try {
@@ -91,17 +88,16 @@ TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config,
 			runtime->setErrorRecorder(&m_ErrorRecorder);
 			m_Engine = trt::TrtPtr(runtime->deserializeCudaEngine(
 			    serializedEngine->data(), serializedEngine->size()));
-			std::array<std::pair<const char *, void *>, 4> names = {
-			    {{config.inputOps.at(0).c_str(), m_CurFrameTensor.get()},
-			        {config.inputOps.at(1).c_str(), m_LastFrameTensor.get()},
-			        {config.inputOps.at(2).c_str(), m_PreGenTensor.get()},
-			        {config.outputOp.c_str(), m_OutputTensor.get()}}};
-			for (auto &[name, ptr] : names) {
+			const char *names[] = {config.inputOps.at(0).c_str(),
+			    config.inputOps.at(1).c_str(), config.inputOps.at(2).c_str(),
+			    config.outputOp.c_str()};
+			for (std::size_t i = 0; i < 4; ++i) {
+				auto &name = names[i];
 				auto idx = m_Engine->getBindingIndex(name);
 				if (idx < 0) {
 					throw std::invalid_argument("Invalid node name");
 				}
-				m_Bindings[idx] = ptr;
+				m_BindingIdx[i] = static_cast<std::size_t>(idx);
 			}
 			m_Context = trt::TrtPtr(m_Engine->createExecutionContext());
 		}
@@ -112,20 +108,22 @@ TensorRTBackend::TensorRTBackend(const config::TensorRTConfig &config,
 
 Tensor<float> TensorRTBackend::forwardPass(const Tensor<float> &input) {
 	try {
+		auto idx0 = m_RotIndex;
+		auto idx1 = idx0 ^ 1;
+		m_RotIndex = idx1;
 		std::vector<float> result(m_OutputSize);
-		trt::cudaCheck(::cudaMemcpyAsync(m_CurFrameTensor.get(),
+		trt::cudaCheck(::cudaMemcpyAsync(m_LowResTensors[idx0].get(),
 		    input.data.data(), m_InputSize * sizeof(float),
 		    ::cudaMemcpyKind::cudaMemcpyHostToDevice, m_CudaStream));
-		if (!m_Context->enqueueV2(m_Bindings, m_CudaStream, nullptr)) {
+		void *bindings[4];
+		bindings[m_BindingIdx[0]] = m_LowResTensors[idx0].get();
+		bindings[m_BindingIdx[1]] = m_LowResTensors[idx1].get();
+		bindings[m_BindingIdx[2]] = m_HiResTensor.get();
+		bindings[m_BindingIdx[3]] = m_HiResTensor.get();
+		if (!m_Context->enqueueV2(bindings, m_CudaStream, nullptr)) {
 			throw trt::TrtException();
 		}
-		trt::cudaCheck(::cudaMemcpyAsync(m_LastFrameTensor.get(),
-		    m_CurFrameTensor.get(), m_InputSize * sizeof(float),
-		    ::cudaMemcpyKind::cudaMemcpyDeviceToDevice, m_CudaStream));
-		trt::cudaCheck(::cudaMemcpyAsync(m_PreGenTensor.get(),
-		    m_OutputTensor.get(), m_OutputSize * sizeof(float),
-		    ::cudaMemcpyKind::cudaMemcpyDeviceToDevice, m_CudaStream));
-		trt::cudaCheck(::cudaMemcpyAsync(result.data(), m_OutputTensor.get(),
+		trt::cudaCheck(::cudaMemcpyAsync(result.data(), m_HiResTensor.get(),
 		    m_OutputSize * sizeof(float),
 		    ::cudaMemcpyKind::cudaMemcpyDeviceToHost, m_CudaStream));
 		trt::cudaCheck(::cudaStreamSynchronize(m_CudaStream));

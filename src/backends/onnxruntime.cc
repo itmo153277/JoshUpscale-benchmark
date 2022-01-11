@@ -2,6 +2,7 @@
 
 #include "benchmark/backends/onnxruntime.h"
 
+#include <algorithm>
 #include <cstring>
 
 #include "benchmark/onnxruntime/api.h"
@@ -62,14 +63,12 @@ Tensor<float> OnnxruntimeBackend::forwardPass(const Tensor<float> &input) {
 	    ::Ort::MemoryInfo::CreateCpu(::OrtDeviceAllocator, ::OrtMemTypeCPU),
 	    const_cast<float *>(input.data.data()), input.data.size(),
 	    m_InputShape.data(), m_InputShape.size());
-	auto output = m_Session.Run(::Ort::RunOptions{}, m_NodeNames.data(),
-	    m_Inputs.data(), 3, m_NodeNames.data() + 3, 1);
-	auto outputInfo = output[0].GetTensorTypeAndShapeInfo();
-	const float *outputData = output[0].GetTensorData<float>();
+	m_Session.Run(::Ort::RunOptions{}, m_NodeNames.data(), m_Inputs.data(), 3,
+	    m_NodeNames.data() + 3, m_Inputs.data() + 2, 1);
+	auto outputInfo = m_Inputs[2].GetTensorTypeAndShapeInfo();
+	const float *outputData = m_Inputs[2].GetTensorData<float>();
 	std::memcpy(m_Inputs[1].GetTensorMutableData<float>(), input.data.data(),
 	    input.data.size() * sizeof(float));
-	std::memcpy(m_Inputs[2].GetTensorMutableData<float>(), outputData,
-	    outputInfo.GetElementCount() * sizeof(float));
 	return {m_OutputShape, std::vector<float>(outputData,
 	                           outputData + outputInfo.GetElementCount())};
 }

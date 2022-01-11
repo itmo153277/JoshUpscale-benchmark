@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -25,12 +26,12 @@ public:
 	Tensor<float> forwardPass(const Tensor<float> &input) override;
 
 private:
+	std::uint_fast32_t m_RotIndex = 0;
 	tf::TF_Graph m_Graph;
 	std::vector<::TF_Output> m_InputOps;
 	::TF_Output m_OutputOp;
 	TensorShape m_OutputShape;
-	tf::TF_Tensor<float> m_InputTensor;
-	tf::TF_Tensor<float> m_LastFrameTensor;
+	tf::TF_Tensor<float> m_LowResTensors[2];
 	tf::TF_Tensor<float> m_PreGenTensor;
 	tf::TF_Session m_Session;
 };

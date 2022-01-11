@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "benchmark/backend.h"
@@ -24,16 +25,15 @@ public:
 	Tensor<float> forwardPass(const Tensor<float> &input) override;
 
 private:
+	std::uint_fast32_t m_RotIndex = 0;
 	trt::ErrorRecorder m_ErrorRecorder;
 	trt::Logger m_Logger;
 	TensorShape m_OutputShape;
 	std::size_t m_InputSize;
 	std::size_t m_OutputSize;
-	trt::CudaDeviceBuffer<float> m_CurFrameTensor;
-	trt::CudaDeviceBuffer<float> m_LastFrameTensor;
-	trt::CudaDeviceBuffer<float> m_PreGenTensor;
-	trt::CudaDeviceBuffer<float> m_OutputTensor;
-	void *m_Bindings[4];
+	trt::CudaDeviceBuffer<float> m_LowResTensors[2];
+	trt::CudaDeviceBuffer<float> m_HiResTensor;
+	std::size_t m_BindingIdx[4] = {};
 	trt::TrtPtr<nvinfer1::ICudaEngine> m_Engine;
 	trt::TrtPtr<nvinfer1::IExecutionContext> m_Context;
 	trt::CudaStream m_CudaStream;
