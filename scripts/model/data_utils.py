@@ -22,8 +22,8 @@ def load_data(hr_folder: str, lr_folder: str) -> Tuple[np.array, np.array]:
         assert lr_img is not None
         hr_data.append(hr_img[:, :, ::-1])
         lr_data.append(lr_img[:, :, ::-1])
-    hr_data = np.array(hr_data).astype(np.float32)
-    lr_data = np.array(lr_data).astype(np.float32)
+    hr_data = np.array(hr_data).astype(np.float32) / 255
+    lr_data = np.array(lr_data).astype(np.float32) / 255
     return hr_data, lr_data
 
 
