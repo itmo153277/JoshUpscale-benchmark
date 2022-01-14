@@ -100,7 +100,7 @@ float diff(const Tensor<float> &left, const Tensor<float> &right) {
 	     ++leftIter, ++rightIter) {
 		diff += std::fabs(*leftIter - *rightIter);
 	}
-	return diff;
+	return diff / static_cast<float>(left.data.size());
 }
 
 }  // namespace data
