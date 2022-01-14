@@ -98,7 +98,7 @@ goto :EOF
 call :Echo Execute: %*
 copy nul nul 1>nul 2>&1
 %*
-if errorlevel 1 goto Error
+if not %ERRORLEVEL% == 0 goto Error
 goto :EOF
 
 :Tool
