@@ -90,7 +90,6 @@ OnnxruntimeConfig deserialize<OnnxruntimeConfig>(const YAML::Node &node) {
 		    node["EnableTensorRT"].as<bool>(false),
 		    node["EnableTensorRTFP16"].as<bool>(false),
 		    node["EnableTensorRTINT8"].as<bool>(false),
-		    node["TensorRTCachePath"].as<std::string>(""),
 		    node["TensorRTCalibrationTable"].as<std::string>("")};
 	} catch (...) {
 		throw_with_nested_id(

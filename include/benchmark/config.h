@@ -48,8 +48,7 @@ struct OnnxruntimeConfig {
 	bool enableTensorRT;
 	bool enableTensorRTFP16;
 	bool enableTensorRTINT8;
-	std::string tensorRTCachePath;
-	std::string tensorRTCalibrationTable;
+	std::filesystem::path tensorRTCalibrationTable;
 };
 
 struct TensorRTConfig {

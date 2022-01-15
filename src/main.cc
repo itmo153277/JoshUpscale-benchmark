@@ -25,6 +25,7 @@ using Tensor = benchmark::Tensor<float>;
 
 struct CmdArguments {
 	std::string profilePath = ".";
+	std::string cachePath = ".";
 	std::string configPath;
 	int returnValue = 0;
 };
@@ -40,9 +41,11 @@ bool parseArguments(CmdArguments *argState, int argc, char *argv[]) {
 	    "Options:\n"
 	    "  -h,--help            Show this help\n"
 	    "  --profile-path path  Set output directory for benchmark "
-	    "profiles\n";
+	    "profiles\n"
+	    "  --cache-path path    Set cache directory\n";
 	bool showHelp = false;
 	std::optional<std::string> profilePath = std::move(argState->profilePath);
+	std::optional<std::string> cachePath = std::move(argState->cachePath);
 	std::optional<std::string> configPath = std::nullopt;
 
 	std::vector<cmdline::ArgOption> options = {
@@ -69,6 +72,14 @@ bool parseArguments(CmdArguments *argState, int argc, char *argv[]) {
 	            &profilePath               // data
 	        },
 	        false  // abortIfPresent
+	    },
+	    {
+	        "--cache-path",  // name
+	        {
+	            cmdline::ArgType::STRING,  // type
+	            &cachePath                 // data
+	        },
+	        false  // abortIfPresent
 	    }};
 	std::vector<cmdline::ArgDef> positional = {{
 	    cmdline::ArgType::STRING,  // type
@@ -90,6 +101,7 @@ bool parseArguments(CmdArguments *argState, int argc, char *argv[]) {
 		return false;
 	}
 	argState->profilePath = std::move(profilePath.value());
+	argState->cachePath = std::move(cachePath.value());
 	argState->configPath = std::move(configPath.value());
 	return true;
 }
@@ -115,15 +127,13 @@ int main(int argc, char *argv[]) {
 		std::filesystem::path configPath = argState.configPath;
 		config::BenchmarkConfig benchmarkConfig =
 		    config::readConfig(configPath.c_str());
+		LOG_INFO << "Loading data";
 		auto [lowResImgs, hiResImgs] = readData(benchmarkConfig.dataConfig);
-		LOG_INFO << "Loading backend";
-		auto backend = backend::createBackend(
-		    benchmarkConfig.backendConfig, lowResImgs, hiResImgs);
 		std::filesystem::path profilePath = argState.profilePath;
-		if (!benchmarkConfig.profileTag.empty()) {
-			profilePath /= benchmarkConfig.profileTag;
-		}
-		std::filesystem::create_directories(profilePath);
+		std::filesystem::path cachePath = argState.cachePath;
+		LOG_INFO << "Loading backend";
+		auto backend = backend::createBackend(benchmarkConfig.backendConfig,
+		    lowResImgs, hiResImgs, profilePath.c_str(), cachePath.c_str());
 		benchmark::benchmark(backend.get(), lowResImgs, hiResImgs,
 		    benchmarkConfig.numIterations);
 	} catch (...) {

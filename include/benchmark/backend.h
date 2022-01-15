@@ -13,16 +13,25 @@ namespace benchmark {
 
 namespace backend {
 
-class Backend {
+class BackendSession {
 public:
-	virtual ~Backend() {
+	virtual ~BackendSession() {
 	}
 
 	virtual Tensor<float> forwardPass(const Tensor<float> &input) = 0;
 };
 
+class Backend {
+public:
+	virtual ~Backend() {
+	}
+
+	virtual std::unique_ptr<BackendSession> createSession(bool profile) = 0;
+};
+
 std::unique_ptr<Backend> createBackend(const config::BackendConfig &config,
-    const Tensor<float> &examples, const Tensor<float> &exampleOut);
+    const Tensor<float> &examples, const Tensor<float> &exampleOut,
+    const path_type *profilePath, const path_type *cachePath);
 
 }  // namespace backend
 

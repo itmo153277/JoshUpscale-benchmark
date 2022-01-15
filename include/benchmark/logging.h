@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include "benchmark/utils.h"
+
 namespace benchmark {
 
 namespace logging {
@@ -60,8 +62,16 @@ inline logging::LogInterface logError(const char *tag) {
 	return {tag, "ERROR"};
 }
 
+inline void logException(const char *tag) noexcept {
+	try {
+		logError(tag) << getExceptionString();
+	} catch (...) {
+	}
+}
+
 #define LOG_INFO ::benchmark::logInfo(__func__)
 #define LOG_WARN ::benchmark::logWarn(__func__)
 #define LOG_ERROR ::benchmark::logError(__func__)
+#define LOG_EXCEPTION ::benchmark::logException(__func__)
 
 }  // namespace benchmark

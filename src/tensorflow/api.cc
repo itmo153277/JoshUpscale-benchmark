@@ -1,10 +1,11 @@
 // Copyright 2021 Ivanov Viktor
 
+#include "benchmark/tensorflow/api.h"
+
 #include <cstddef>
 #include <fstream>
 #include <ios>
 
-#include "benchmark/tensorflow/api.h"
 #include "benchmark/utils.h"
 
 namespace benchmark {

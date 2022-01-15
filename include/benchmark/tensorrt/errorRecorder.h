@@ -11,7 +11,6 @@
 
 #include "benchmark/logging.h"
 #include "benchmark/tensorrt/api.h"
-#include "benchmark/utils.h"
 
 namespace benchmark {
 
@@ -126,10 +125,8 @@ private:
 	ErrorCode m_ErrorCode{ErrorCode::kSUCCESS};
 	std::string m_ErrorDesc;
 
-	void printException() const noexcept {
-		logError("ErrorRecorder")
-		    << "Unhandled exception during error tracking: "
-		    << getExceptionString();
+	static void printException() noexcept {
+		logException("ErrorRecorder");
 	}
 };
 

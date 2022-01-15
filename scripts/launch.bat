@@ -14,12 +14,20 @@ set ScriptTitle=JoshUpscale Benchmark
 
 if not "%~1" == "/logging" goto SetupLogging
 set logTimestamp=%~2
-shift /0
-shift /0
+shift /1
+shift /1
 
 title %ScriptTitle%
 
 :Main
+
+set globalProfileDir=profiles\%logTimestamp%
+set globalCacheDir=%TEMP%\JoshUpscale\%logTimestamp%
+if not exist "%globalCacheDir%" mkdir "%globalCacheDir%"
+if not exist "%~dp0%globalProfileDir%" mkdir "%~dp0%globalProfileDir%"
+
+call :Echo Cache dir: %globalCacheDir%
+call :Echo Profile dir: %globalProfileDir%
 
 if not "%~1" == "" goto FromCmdline
 
@@ -48,6 +56,7 @@ cd /d "%~dp0"
 7z a -mx9 "%logTimestamp%.zip" "logs\%logTimestamp%.log" "profiles\%logTimestamp%" >nul
 call :Echo Archive path: %logTimestamp%.zip
 endlocal
+echo Press any key to exit
 pause >nul
 goto :EOF
 
@@ -60,8 +69,13 @@ set TF_CPP_MIN_LOG_LEVEL=0
 set TF_CPP_VMODULE=
 set OMP_NUM_THREADS=%NUMBER_OF_PROCESSORS%
 set configFile=%~f1
+set configName=%~n1
+set profileDir=%globalProfileDir%\%configName%
+set cacheDir=%globalCacheDir%\%configName%
 pushd %~dp0
-call :Execute benchmark --profile-path profiles\%logTimestamp% "%configFile%"
+if not exist "%profileDir%" mkdir "%profileDir%"
+if not exist "%cacheDir%" mkdir "%cacheDir%"
+call :Execute benchmark --profile-path "%profileDir%" --cache-path "%cacheDir%" "%configFile%"
 popd
 title %ScriptTitle%
 goto :EOF
@@ -128,15 +142,20 @@ goto :EOF
 
 :Success
 call :Echo Benchmark finished successfully
-endlocal
-exit
+set ExitCode=0
+goto CleanUp
 
 :Error
 call :Echo Error %ErrorLevel%
+set ExitCode=%ErrorLevel%
+goto CleanUp
+
+:CleanUp
+if not "%globalCacheDir%" == "" rmdir /s /q "%globalCacheDir%"
 (
   title %ScriptTitle%
   endlocal
-  exit %ErrorLevel%
+  exit %ExitCode%
 )
 
 :Unsupported
