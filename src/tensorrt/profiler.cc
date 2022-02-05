@@ -20,7 +20,7 @@ Profiler::~Profiler() {
 			profileFile << layerName << ' ' << ms << std::endl;
 		}
 	} catch (...) {
-        LOG_EXCEPTION;
+		LOG_EXCEPTION;
 	}
 }
 

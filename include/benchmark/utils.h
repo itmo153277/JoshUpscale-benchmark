@@ -53,10 +53,7 @@ template <typename T>
 void printException(
     std::ostream &os, const std::exception &e, const std::type_info &info);
 
-template <typename T>
-void printException(std::ostream &os, const T &e) {
-	printException(os, e, typeid(e));
-}
+void printException(std::ostream &os, const std::exception &e);
 
 void printException(std::ostream &os);
 

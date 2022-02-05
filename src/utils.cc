@@ -8,6 +8,7 @@
 #include <exception>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <typeinfo>
 
@@ -66,17 +67,20 @@ void printException(
 	}
 }
 
+void printException(std::ostream &os, const std::exception &e) {
+	try {
+		printException(
+		    os, e, dynamic_cast<const ExceptionWithIdBase &>(e).type_info());
+	} catch (std::bad_cast &) {
+		printException(os, e, typeid(e));
+	}
+}
+
 void printException(std::ostream &os) {
 	try {
 		throw;
 	} catch (std::exception &e) {
-		try {
-			throw;
-		} catch (ExceptionWithIdBase &id) {
-			printException(os, e, id.type_info());
-		} catch (...) {
-			printException(os, e);
-		}
+		printException(os, e);
 	} catch (...) {
 		os << "Unknown error";
 	}
