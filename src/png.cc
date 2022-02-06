@@ -15,8 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "benchmark/tensor.h"
-
 namespace benchmark {
 
 constexpr int kPngSignatureSize = 8;
@@ -61,7 +59,7 @@ struct PngStruct {
 	}
 };
 
-Tensor<std::uint8_t> readPng(const char *fileName) {
+std::vector<std::uint8_t> readPng(const char *fileName) {
 	std::ifstream pngFile(fileName, std::ios::in | std::ios::binary);
 	pngFile.exceptions(std::ios::failbit | std::ios::badbit);
 	char header[kPngSignatureSize];
@@ -125,13 +123,13 @@ Tensor<std::uint8_t> readPng(const char *fileName) {
 	if (bitdepth != 8 || channels != 3) {
 		throw std::runtime_error("Unsupported PNG");
 	}
-	Tensor<std::uint8_t> pngImage = {{imgHeight, imgWidth, channels}, {}};
+	std::vector<std::uint8_t> pngImage;
 	std::size_t stride =
 	    static_cast<std::size_t>(imgWidth) * static_cast<std::size_t>(channels);
-	pngImage.data.resize(static_cast<std::size_t>(imgHeight) * stride);
+	pngImage.resize(static_cast<std::size_t>(imgHeight) * stride);
 	std::vector<::png_bytep> rowPointers(imgHeight);
 	::png_bytep pngDataPtr =
-	    reinterpret_cast<::png_bytep>(pngImage.data.data());
+	    reinterpret_cast<::png_bytep>(pngImage.data());
 	for (::png_uint_32 i = 0; i < imgHeight; ++i, pngDataPtr += stride) {
 		rowPointers[i] = pngDataPtr;
 	}

@@ -1,5 +1,6 @@
 // Copyright 2021 Ivanov Viktor
 
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iostream>
@@ -8,20 +9,13 @@
 #include <string>
 #include <utility>
 
-#include "benchmark/backend.h"
-#include "benchmark/benchmark.h"
 #include "benchmark/cmdline.h"
 #include "benchmark/config.h"
 #include "benchmark/logging.h"
-#include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
 namespace cmdline = benchmark::cmdline;
 namespace config = benchmark::config;
-namespace data = benchmark::data;
-namespace backend = benchmark::backend;
-
-using Tensor = benchmark::Tensor<float>;
 
 struct CmdArguments {
 	std::string profilePath = ".";
@@ -106,18 +100,6 @@ bool parseArguments(CmdArguments *argState, int argc, char *argv[]) {
 	return true;
 }
 
-std::pair<Tensor, Tensor> readData(const config::DataConfig &dataConfig) {
-	auto lowResImgs = data::loadData(dataConfig.lowResPath.c_str(),
-	    dataConfig.dataFormat, dataConfig.lowResShape);
-	auto hiResImgs = data::loadData(dataConfig.hiResPath.c_str(),
-	    dataConfig.dataFormat, dataConfig.hiResShape);
-	if (hiResImgs.shape[0] != lowResImgs.shape[0]) {
-		throw std::invalid_argument(
-		    "Number of images for hi and low res must be equal");
-	}
-	return {lowResImgs, hiResImgs};
-}
-
 int main(int argc, char *argv[]) {
 	try {
 		CmdArguments argState;
@@ -127,15 +109,8 @@ int main(int argc, char *argv[]) {
 		std::filesystem::path configPath = argState.configPath;
 		config::BenchmarkConfig benchmarkConfig =
 		    config::readConfig(configPath.c_str());
-		LOG_INFO << "Loading data";
-		auto [lowResImgs, hiResImgs] = readData(benchmarkConfig.dataConfig);
 		std::filesystem::path profilePath = argState.profilePath;
 		std::filesystem::path cachePath = argState.cachePath;
-		LOG_INFO << "Loading backend";
-		auto backend = backend::createBackend(benchmarkConfig.backendConfig,
-		    lowResImgs, hiResImgs, profilePath.c_str(), cachePath.c_str());
-		benchmark::benchmark(backend.get(), lowResImgs, hiResImgs,
-		    benchmarkConfig.numIterations);
 	} catch (...) {
 		std::cerr << "Exception: " << benchmark::getExceptionString()
 		          << std::endl;

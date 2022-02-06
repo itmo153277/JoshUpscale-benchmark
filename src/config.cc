@@ -16,8 +16,6 @@
 #include <sstream>
 #include <string>
 
-#include "benchmark/data.h"
-#include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
 namespace benchmark {
@@ -26,18 +24,6 @@ namespace config {
 
 template <typename T>
 T deserialize(const YAML::Node &node);
-
-template <>
-data::DataFormat deserialize<data::DataFormat>(const YAML::Node &node) {
-	auto value = node.as<std::string>();
-	if (value == "NHWC") {
-		return benchmark::data::DataFormat::NHWC;
-	}
-	if (value == "NCHW") {
-		return benchmark::data::DataFormat::NCHW;
-	}
-	throw ConfigParseException("Invalid data format value");
-}
 
 namespace {
 void validatePathMask(const std::string &s) {
@@ -65,69 +51,13 @@ DataConfig deserialize<DataConfig>(const YAML::Node &node) {
 	}
 	try {
 		auto lowResPath = node["LowResPath"].as<std::string>();
-		auto lowResShape = node["LowResShape"].as<TensorShape>();
 		auto hiResPath = node["HiResPath"].as<std::string>();
-		auto hiResShape = node["HiResShape"].as<TensorShape>();
-		auto dataFormat = deserialize<data::DataFormat>(node["DataFormat"]);
 		validatePathMask(lowResPath);
 		validatePathMask(hiResPath);
-		return {lowResPath, lowResShape, hiResPath, hiResShape, dataFormat};
+		return {lowResPath, hiResPath};
 	} catch (...) {
 		throw_with_nested_id(
 		    ConfigParseException("Failed to parse data config"));
-	}
-}
-
-template <>
-OnnxruntimeConfig deserialize<OnnxruntimeConfig>(const YAML::Node &node) {
-	if (!node || !node.IsMap()) {
-		throw ConfigParseException("Missing onnxruntime backend config");
-	}
-	try {
-		return {node["ModelFileName"].as<std::string>(),
-		    node["InputOps"].as<std::vector<std::string>>(),
-		    node["OutputOp"].as<std::string>(),
-		    node["EnableTensorRT"].as<bool>(false),
-		    node["EnableTensorRTFP16"].as<bool>(false),
-		    node["EnableTensorRTINT8"].as<bool>(false),
-		    node["TensorRTCalibrationTable"].as<std::string>("")};
-	} catch (...) {
-		throw_with_nested_id(
-		    ConfigParseException("Failed to parse onnxruntime backend config"));
-	}
-}
-
-template <>
-TensorflowConfig deserialize<TensorflowConfig>(const YAML::Node &node) {
-	if (!node || !node.IsMap()) {
-		throw ConfigParseException("Missing tensorflow backend config");
-	}
-	try {
-		return {node["GraphFileName"].as<std::string>(),
-		    node["InputOps"].as<std::vector<std::string>>(),
-		    node["OutputOp"].as<std::string>(),
-		    node["EnableXLA"].as<bool>(false)};
-	} catch (...) {
-		throw_with_nested_id(
-		    ConfigParseException("Failed to parse tensorflow backend config"));
-	}
-}
-
-template <>
-TensorRTConfig deserialize<TensorRTConfig>(const YAML::Node &node) {
-	if (!node || !node.IsMap()) {
-		throw ConfigParseException("Missing TensorRT backend config");
-	}
-	try {
-		return {node["ModelFileName"].as<std::string>(),
-		    node["InputOps"].as<std::vector<std::string>>(),
-		    node["OutputOp"].as<std::string>(),
-		    node["EnableFP16"].as<bool>(false),
-		    node["EnableINT8"].as<bool>(false),
-		    node["MaxWorkspaceSizeBytes"].as<std::size_t>(0)};
-	} catch (...) {
-		throw_with_nested_id(
-		    ConfigParseException("Failed to parse TensorRT backend config"));
 	}
 }
 
@@ -153,21 +83,7 @@ BackendConfig deserialize<BackendConfig>(const YAML::Node &node) {
 	}
 	try {
 		auto backendType = deserialize<BackendType>(node["BackendType"]);
-		switch (backendType) {
-		case BackendType::ONNXRUNTIME:
-			return {backendType,
-			    deserialize<OnnxruntimeConfig>(node["OnnxruntimeConfig"]),
-			    std::nullopt, std::nullopt};
-		case BackendType::TENSORFLOW:
-			return {backendType, std::nullopt,
-			    deserialize<TensorflowConfig>(node["TensorflowConfig"]),
-			    std::nullopt};
-		case BackendType::TENSORRT:
-			return {backendType, std::nullopt, std::nullopt,
-			    deserialize<TensorRTConfig>(node["TensorRTConfig"])};
-		default:
-			return {backendType, std::nullopt, std::nullopt, std::nullopt};
-		}
+		return {backendType};
 	} catch (...) {
 		throw_with_nested_id(
 		    ConfigParseException("Failed to parse backend config"));

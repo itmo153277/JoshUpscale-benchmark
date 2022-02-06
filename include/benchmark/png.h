@@ -3,11 +3,10 @@
 #pragma once
 
 #include <cstdint>
-
-#include "benchmark/tensor.h"
+#include <vector>
 
 namespace benchmark {
 
-Tensor<std::uint8_t> readPng(const char *fileName);
+std::vector<std::uint8_t> readPng(const char *fileName);
 
 }  // namespace benchmark

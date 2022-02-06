@@ -9,8 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "benchmark/data.h"
-#include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
 namespace benchmark {
@@ -26,45 +24,13 @@ struct ConfigParseException : std::exception {
 
 struct DataConfig {
 	std::string lowResPath;
-	TensorShape lowResShape;
 	std::string hiResPath;
-	TensorShape hiResShape;
-	data::DataFormat dataFormat;
 };
 
 enum class BackendType { ONNXRUNTIME, TENSORFLOW, TENSORRT };
 
-struct TensorflowConfig {
-	std::filesystem::path graphFileName;
-	std::vector<std::string> inputOps;
-	std::string outputOp;
-	bool enableXLA;
-};
-
-struct OnnxruntimeConfig {
-	std::filesystem::path modelFileName;
-	std::vector<std::string> inputOps;
-	std::string outputOp;
-	bool enableTensorRT;
-	bool enableTensorRTFP16;
-	bool enableTensorRTINT8;
-	std::filesystem::path tensorRTCalibrationTable;
-};
-
-struct TensorRTConfig {
-	std::filesystem::path modelFileName;
-	std::vector<std::string> inputOps;
-	std::string outputOp;
-	bool enableFP16;
-	bool enableINT8;
-	std::size_t maxWorkspaceSizeBytes;
-};
-
 struct BackendConfig {
 	BackendType backendType;
-	std::optional<OnnxruntimeConfig> onnxruntimeConfig;
-	std::optional<TensorflowConfig> tensorflowConfig;
-	std::optional<TensorRTConfig> tensorRTConfig;
 };
 
 struct BenchmarkConfig {
