@@ -396,13 +396,14 @@ struct SimpleImpl {
 	}
 
 	static void convertRgbBgr(Tensor<T> *to, const Tensor<T> &from) {
-		for (TensorDim batch = 0; batch < from.getShape().getBatchSize();
-		     ++batch) {
-			for (TensorDim y = 0; y < from.getShape().getHeight(); ++y) {
+		for (TensorDim batch = 0, batchSize = from.getShape().getBatchSize();
+		     batch < batchSize; ++batch) {
+			for (TensorDim y = 0, height = from.getShape().getHeight();
+			     y < height; ++y) {
 				T *toPtr = (*to)[batch][y].data();
 				const T *fromPtr = from[batch][y].data();
-				for (TensorDim x = 0; x < from.getShape().getWidth();
-				     ++x, toPtr += 3, fromPtr += 3) {
+				for (TensorDim x = 0, width = from.getShape().getWidth();
+				     x < width; ++x, toPtr += 3, fromPtr += 3) {
 					toPtr[0] = fromPtr[2];
 					toPtr[1] = fromPtr[1];
 					toPtr[2] = fromPtr[0];
