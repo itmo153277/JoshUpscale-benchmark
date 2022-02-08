@@ -100,7 +100,7 @@ private:
 		BaseIter &operator=(BaseIter &&) noexcept = default;
 
 		bool operator!=(const BaseIter &s) const {
-			return m_BatchNUmber != s.m_BatchNUmber || m_Height != s.m_Height ||
+			return m_BatchNumber != s.m_BatchNumber || m_Height != s.m_Height ||
 			       m_Width != s.m_Width || m_Channel != s.m_Channel;
 		}
 		BaseIter &operator++() {
@@ -117,7 +117,7 @@ private:
 			}
 			if (m_Height >= m_Tensor->getShape().getHeight()) {
 				m_Height = 0;
-				++m_BatchNUmber;
+				++m_BatchNumber;
 				m_Ptr += m_Tensor->m_IncrementalStrides[0];
 			}
 			return *this;
@@ -139,7 +139,7 @@ private:
 		BaseIter(TensorType *tensor, TensorDim batchNumber)
 		    : m_Tensor(tensor)
 		    , m_Ptr(tensor->data() + batchNumber * tensor->m_Strides[0])
-		    , m_BatchNUmber(batchNumber)
+		    , m_BatchNumber(batchNumber)
 		    , m_Height(0)
 		    , m_Width(0)
 		    , m_Channel(0) {
@@ -147,7 +147,7 @@ private:
 
 		TensorType *m_Tensor;
 		Val *m_Ptr;
-		TensorDim m_BatchNUmber;
+		TensorDim m_BatchNumber;
 		TensorDim m_Height;
 		TensorDim m_Width;
 		TensorDim m_Channel;
@@ -156,7 +156,7 @@ private:
 			return m_Channel +
 			       (m_Width +
 			           (m_Height +
-			               m_BatchNUmber * m_Tensor->getShape().getHeight()) *
+			               m_BatchNumber * m_Tensor->getShape().getHeight()) *
 			               m_Tensor->getShape().getWidth()) *
 			           3;
 		}
@@ -405,7 +405,7 @@ struct SimpleImpl {
 				     ++x, toPtr += 3, fromPtr += 3) {
 					toPtr[0] = fromPtr[2];
 					toPtr[1] = fromPtr[1];
-					toPtr[0] = fromPtr[0];
+					toPtr[2] = fromPtr[0];
 				}
 			}
 		}
