@@ -112,8 +112,7 @@ int main(int argc, char *argv[]) {
 		std::filesystem::path profilePath = argState.profilePath;
 		std::filesystem::path cachePath = argState.cachePath;
 	} catch (...) {
-		std::cerr << "Exception: " << benchmark::getExceptionString()
-		          << std::endl;
+		LOG_EXCEPTION;
 		return 1;
 	}
 	return 0;

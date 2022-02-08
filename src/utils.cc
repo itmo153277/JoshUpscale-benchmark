@@ -19,6 +19,10 @@
 #include <memory>
 #endif
 
+#ifdef _MSC_VER
+#include <cstring>
+#endif
+
 namespace benchmark {
 
 std::string formatString(const char *format, ...) {
@@ -34,11 +38,11 @@ std::string formatString(const char *format, ...) {
 namespace {
 std::string demangle(const char *name) {
 #if defined(__GNUG__)
-	int status = EXIT_FAILURE;
+	int status = 0;
 	std::unique_ptr<char, void (*)(void *)> res{
 	    abi::__cxa_demangle(name, NULL, NULL, &status), std::free};
 
-	return (status == EXIT_SUCCESS) ? res.get() : name;
+	return (status == 0) ? res.get() : name;
 #elif defined(_MSC_VER)
 	static const char *prefixes[] = {"class ", "struct ", "union ", ""};
 	static const std::size_t prefixLens[] = {6, 7, 6, 0};

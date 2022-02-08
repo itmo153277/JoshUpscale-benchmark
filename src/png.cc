@@ -59,7 +59,7 @@ struct PngStruct {
 	}
 };
 
-std::vector<std::uint8_t> readPng(const char *fileName) {
+Tensor<std::uint8_t> readPng(const char *fileName) {
 	std::ifstream pngFile(fileName, std::ios::in | std::ios::binary);
 	pngFile.exceptions(std::ios::failbit | std::ios::badbit);
 	char header[kPngSignatureSize];
@@ -123,15 +123,10 @@ std::vector<std::uint8_t> readPng(const char *fileName) {
 	if (bitdepth != 8 || channels != 3) {
 		throw std::runtime_error("Unsupported PNG");
 	}
-	std::vector<std::uint8_t> pngImage;
-	std::size_t stride =
-	    static_cast<std::size_t>(imgWidth) * static_cast<std::size_t>(channels);
-	pngImage.resize(static_cast<std::size_t>(imgHeight) * stride);
+	Tensor<std::uint8_t> pngImage({1, imgHeight, imgWidth});
 	std::vector<::png_bytep> rowPointers(imgHeight);
-	::png_bytep pngDataPtr =
-	    reinterpret_cast<::png_bytep>(pngImage.data());
-	for (::png_uint_32 i = 0; i < imgHeight; ++i, pngDataPtr += stride) {
-		rowPointers[i] = pngDataPtr;
+	for (::png_uint_32 i = 0; i < imgHeight; ++i) {
+		rowPointers[i] = reinterpret_cast<::png_bytep>(pngImage[0][i].data());
 	}
 	::png_read_image(pngStruct.pngPtr, rowPointers.data());
 	return pngImage;

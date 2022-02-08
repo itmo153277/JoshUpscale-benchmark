@@ -5,8 +5,10 @@
 #include <cstdint>
 #include <vector>
 
+#include "benchmark/tensor.h"
+
 namespace benchmark {
 
-std::vector<std::uint8_t> readPng(const char *fileName);
+Tensor<std::uint8_t> readPng(const char *fileName);
 
 }  // namespace benchmark
