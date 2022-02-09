@@ -51,7 +51,7 @@ struct AlignedStorage : TensorStorage {
 		}
 	}
 
-	void *getPtr() override {
+	void *getPtr() const override {
 		return m_Ptr;
 	}
 
@@ -72,7 +72,7 @@ struct PlainStorage : TensorStorage {
 		}
 	}
 
-	void *getPtr() override {
+	void *getPtr() const override {
 		return m_Ptr;
 	}
 
@@ -80,18 +80,19 @@ private:
 	void *m_Ptr = nullptr;
 };
 
-std::tuple<TensorStoragePtr, TensorStrides> allocateOptimal(
+std::tuple<std::unique_ptr<TensorStorage>, TensorStrides> allocOpt(
     const TensorShape &shape, std::size_t elementSize) {
 	auto strides = shape.getPlainStrides();
-	strides[1] = (strides[1] + defaultDataAlign - 1) % defaultDataAlign;
+	strides[1] += defaultDataAlign - 1;
+	strides[1] -= strides[1] % defaultDataAlign;
 	strides[0] = static_cast<TensorStride>(strides[1] * shape.getHeight());
-	return {std::make_shared<AlignedStorage>(
-	            strides[0] * shape.getBatchSize() * elementSize),
-	    strides};
+	TensorDim size = strides[0] * shape.getBatchSize();
+	return {std::make_unique<AlignedStorage>(size * elementSize), strides};
 }
-TensorStoragePtr allocatePlain(
+
+std::unique_ptr<TensorStorage> allocPlain(
     const TensorShape &shape, std::size_t elementSize) {
-	return std::make_shared<AlignedStorage>(shape.getSize() * elementSize);
+	return std::make_unique<AlignedStorage>(shape.getSize() * elementSize);
 }
 
 }  // namespace detail

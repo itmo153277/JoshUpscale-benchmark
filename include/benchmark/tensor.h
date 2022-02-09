@@ -2,15 +2,12 @@
 
 #pragma once
 
-#ifdef _MSC_VER
-#pragma warning(disable : 26451)
-#endif
-
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <memory>
 #include <tuple>
@@ -25,7 +22,7 @@ using TensorStride = std::make_signed_t<TensorDim>;
 using TensorStrides = std::array<TensorStride, 2>;
 
 struct TensorStorage {
-	virtual void *getPtr() = 0;
+	virtual void *getPtr() const = 0;
 	virtual ~TensorStorage() {
 	}
 };
@@ -37,9 +34,6 @@ public:
 	TensorShape() = default;
 	TensorShape(TensorDim batchSize, TensorDim height, TensorDim width)
 	    : m_BatchSize(batchSize), m_Height(height), m_Width(width) {
-	}
-	TensorShape(const TensorDim (&shape)[3])  // NOLINT(runtime/explicit)
-	    : TensorShape(shape[0], shape[1], shape[2]) {
 	}
 	TensorShape(const TensorShape &) = default;
 	TensorShape(TensorShape &&) noexcept = default;
@@ -75,17 +69,20 @@ namespace detail {
 template <typename T>
 struct FastImpl;
 
-std::tuple<TensorStoragePtr, TensorStrides> allocateOptimal(
+std::tuple<std::unique_ptr<TensorStorage>, TensorStrides> allocOpt(
     const TensorShape &shape, std::size_t elementSize);
-TensorStoragePtr allocatePlain(
+std::unique_ptr<TensorStorage> allocPlain(
     const TensorShape &shape, std::size_t elementSize);
 
 }  // namespace detail
 
 template <typename T>
 class Tensor {
+	static_assert(std::is_trivial_v<T> && std::is_copy_assignable_v<T>,
+	    "T has to be trivial");
+
 private:
-	template <typename Val = T, typename TensorType = Tensor>
+	template <typename Val = T>
 	struct BaseIter {
 		using iterator_category = std::forward_iterator_tag;
 		using value_type = Val;
@@ -136,16 +133,17 @@ private:
 		}
 
 	private:
-		BaseIter(TensorType *tensor, TensorDim batchNumber)
+		BaseIter(Tensor *tensor, TensorDim batchNumber)
 		    : m_Tensor(tensor)
-		    , m_Ptr(tensor->data() + batchNumber * tensor->m_Strides[0])
+		    , m_Ptr(tensor->m_Ptr + batchNumber * static_cast<std::intptr_t>(
+		                                              tensor->m_Strides[0]))
 		    , m_BatchNumber(batchNumber)
 		    , m_Height(0)
 		    , m_Width(0)
 		    , m_Channel(0) {
 		}
 
-		TensorType *m_Tensor;
+		Tensor *m_Tensor;
 		Val *m_Ptr;
 		TensorDim m_BatchNumber;
 		TensorDim m_Height;
@@ -165,8 +163,8 @@ private:
 	};
 
 public:
-	using iterator = BaseIter<T, Tensor>;
-	using const_iterator = BaseIter<const T, const Tensor>;
+	using iterator = BaseIter<T>;
+	using const_iterator = BaseIter<const T>;
 
 	Tensor(const TensorShape &shape, T *ptr, TensorStrides strides,
 	    const TensorStoragePtr &storage)
@@ -174,14 +172,16 @@ public:
 		updateIncrementalStrides();
 	}
 	explicit Tensor(const TensorShape &shape) : m_Shape(shape) {
-		std::tie(m_Storage, m_Strides) =
-		    detail::allocateOptimal(m_Shape, sizeof(T));
+		std::tie(m_Storage, m_Strides) = detail::allocOpt(m_Shape, sizeof(T));
+		m_Ptr = reinterpret_cast<T *>(m_Storage->getPtr());
 		updateIncrementalStrides();
+		// TODO(viktprog): Storage left uninitialized. Reading from the tensor
+		// is UB until assign() is called
 	}
-	Tensor(const Tensor &) = default;
+	Tensor(const Tensor &) = delete;
 	Tensor(Tensor &&) noexcept = default;
 
-	Tensor &operator=(const Tensor &) = default;
+	Tensor &operator=(const Tensor &) = delete;
 	Tensor &operator=(Tensor &&) noexcept = default;
 
 	T *data() {
@@ -213,7 +213,7 @@ public:
 
 	template <typename Val>
 	struct PixelIndexer {
-		Val &operator[](TensorDim i) {
+		Val &operator[](TensorDim i) const {
 			return m_Ptr[i];
 		}
 
@@ -227,13 +227,9 @@ public:
 
 	template <typename Val>
 	struct RowIndexer {
-		PixelIndexer<Val> operator[](TensorDim i) {
-			return PixelIndexer<Val>(m_Ptr + i * 3);
-		}
-		template <int size>
-		auto operator[](const TensorDim (&i)[size]) {
-			static_assert(size == 2);
-			return (*this)[i[0]][i[1]];
+		PixelIndexer<Val> operator[](TensorDim i) const {
+			TensorStride offset = i * 3;
+			return PixelIndexer<Val>(m_Ptr + offset);
 		}
 		Val *data() const {
 			return m_Ptr;
@@ -249,26 +245,20 @@ public:
 
 	template <typename Val>
 	struct ImageIndexer {
-		RowIndexer<Val> operator[](TensorDim i) {
-			return RowIndexer<Val>(m_Ptr + m_Tensor->m_Strides[1] * i);
-		}
-		template <int size>
-		auto operator[](const TensorDim (&i)[size]) {
-			static_assert(size >= 2 && size <= 3);
-			if constexpr (size == 2) {
-				return (*this)[i[0]][i[1]];
-			} else {
-				return (*this)[i[0]][i[1]][i[2]];
-			}
+		RowIndexer<Val> operator[](TensorDim i) const {
+			TensorStride offset = m_Tensor->m_Strides[1] * i;
+			return RowIndexer<Val>(m_Ptr + offset);
 		}
 		Val *data() const {
 			return m_Ptr;
 		}
 
-		Tensor<Val> getTensor() {
-			return Tensor{{1, m_Tensor->getShape().getHeight(),
-			                  m_Tensor->getShape().getWidth()},
-			    const_cast<T *>(m_Ptr),
+		Tensor getTensor() {
+			static_assert(
+			    !std::is_const_v<Val>, "Cannot create tensor for const value");
+			return {{1, m_Tensor->getShape().getHeight(),
+			            m_Tensor->getShape().getWidth()},
+			    m_Ptr,
 			    {static_cast<TensorStride>(
 			         m_Tensor->m_Strides[1] * m_Tensor->getShape().getHeight()),
 			        m_Tensor->m_Strides[1]},
@@ -285,33 +275,13 @@ public:
 	};
 
 	ImageIndexer<T> operator[](TensorDim i) {
-		return ImageIndexer<T>(m_Ptr + m_Strides[0] * i, this);
-	}
-	template <int size>
-	auto operator[](const TensorDim (&i)[size]) {
-		static_assert(size >= 2 && size <= 4);
-		if constexpr (size == 2) {
-			return (*this)[i[0]][i[1]];
-		} else if constexpr (size == 3) {
-			return (*this)[i[0]][i[1]][i[2]];
-		} else {
-			return (*this)[i[0]][i[1]][i[2]][i[3]];
-		}
+		TensorStride offset = m_Strides[0] * i;
+		return ImageIndexer<T>(m_Ptr + offset, this);
 	}
 	ImageIndexer<const T> operator[](TensorDim i) const {
+		TensorStride offset = m_Strides[0] * i;
 		return ImageIndexer<const T>(
-		    m_Ptr + m_Strides[0] * i, const_cast<Tensor *>(this));
-	}
-	template <int size>
-	auto operator[](const TensorDim (&i)[size]) const {
-		static_assert(size >= 2 && size <= 4);
-		if constexpr (size == 2) {
-			return (*this)[i[0]][i[1]];
-		} else if constexpr (size == 3) {
-			return (*this)[i[0]][i[1]][i[2]];
-		} else {
-			return (*this)[i[0]][i[1]][i[2]][i[3]];
-		}
+		    m_Ptr + offset, const_cast<Tensor *>(this));
 	}
 
 	iterator begin() {
@@ -321,13 +291,15 @@ public:
 		return {this, m_Shape.getBatchSize()};
 	}
 	const_iterator begin() const {
-		return {this, 0};
+		return {const_cast<Tensor *>(this), 0};
 	}
 	const_iterator end() const {
-		return {this, m_Shape.getBatchSize()};
+		return {const_cast<Tensor *>(this), m_Shape.getBatchSize()};
 	}
 
-	void copyFrom(const Tensor &s) {
+	template <typename U>
+	void assign(const Tensor<U> &s) {
+		static_assert(std::is_assignable_v<T &, U>, "Cannot assign values");
 		assert(m_Shape.getSize() == s.m_Shape.getSize());
 		detail::FastImpl<T>::copy(this, s);
 	}
@@ -336,23 +308,26 @@ public:
 		return m_IncrementalStrides[0] == 0 && m_IncrementalStrides[1] == 0;
 	}
 
-	static Tensor copyOptimal(const Tensor &s) {
-		Tensor result(s.getShape());
-		result.copyFrom(s);
+	Tensor copyOpt() const {
+		Tensor result(getShape());
+		result.assign(*this);
 		return result;
 	}
-	static Tensor copyPlain(const Tensor &s) {
-		auto storage = detail::allocatePlain(s.getShape(), sizeof(T));
-		Tensor result(s.getShape(), reinterpret_cast<T *>(storage->getPtr()),
-		    s.getShape().getPlainStrides(), storage);
-		result.copyFrom(s);
+	Tensor copyPlain() const {
+		TensorStoragePtr storage = detail::allocPlain(getShape(), sizeof(T));
+		Tensor result(getShape(), reinterpret_cast<T *>(storage->getPtr()),
+		    getShape().getPlainStrides(), storage);
+		result.assign(*this);
 		return result;
 	}
 	void convertToPlain() {
 		if (isPlain()) {
 			return;
 		}
-		*this = copyPlain(*this);
+		*this = copyPlain();
+	}
+	Tensor duplicate() {
+		return {m_Shape, m_Ptr, m_Strides, m_Storage};
 	}
 
 private:
@@ -381,6 +356,22 @@ std::vector<Tensor<T>> unbatch(Tensor<T> *tensor) {
 }
 
 template <typename T>
+Tensor<T> batch(const std::vector<Tensor<T>> &tensors) {
+	assert(tensors.size() > 0);
+	auto shape = tensors[0].getShape();
+	assert(shape.getBatchSize() == 1);
+	Tensor<T> result({static_cast<TensorDim>(tensors.size()), shape.getHeight(),
+	    shape.getWidth()});
+	for (TensorDim batch = 0, batchSize = result.getShape().getBatchSize();
+	     batch < batchSize; ++batch) {
+		auto &tensor = tensors[batch];
+		assert(tensor.getShape() == shape);
+		result[batch].getTensor().assign(tensor);
+	}
+	return result;
+}
+
+template <typename T>
 Tensor<T> convertRgbBgr(const Tensor<T> &tensor) {
 	Tensor<T> result(tensor.getShape());
 	detail::FastImpl<T>::convertRgbBgr(&result, tensor);
@@ -391,7 +382,14 @@ namespace detail {
 
 template <typename T>
 struct SimpleImpl {
-	static void copy(Tensor<T> *to, const Tensor<T> &from) {
+	template <typename U>
+	static void copy(Tensor<T> *to, const Tensor<U> &from) {
+		if constexpr (std::is_same_v<U, T>) {
+			if (to->isPlain() && from.isPlain()) {
+				std::memcpy(to->data(), from.data(), from.size());
+				return;
+			}
+		}
 		std::copy(from.begin(), from.end(), to->begin());
 	}
 
@@ -415,7 +413,8 @@ struct SimpleImpl {
 
 template <typename T>
 struct FastImpl {
-	static void copy(Tensor<T> *to, const Tensor<T> &from) {
+	template <typename U>
+	static void copy(Tensor<T> *to, const Tensor<U> &from) {
 		SimpleImpl<T>::copy(to, from);
 	}
 
