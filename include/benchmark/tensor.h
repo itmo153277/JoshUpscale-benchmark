@@ -371,13 +371,6 @@ Tensor<T> batch(const std::vector<Tensor<T>> &tensors) {
 	return result;
 }
 
-template <typename T>
-Tensor<T> convertRgbBgr(const Tensor<T> &tensor) {
-	Tensor<T> result(tensor.getShape());
-	detail::FastImpl<T>::convertRgbBgr(&result, tensor);
-	return result;
-}
-
 namespace detail {
 
 template <typename T>
@@ -392,23 +385,6 @@ struct SimpleImpl {
 		}
 		std::copy(from.begin(), from.end(), to->begin());
 	}
-
-	static void convertRgbBgr(Tensor<T> *to, const Tensor<T> &from) {
-		for (TensorDim batch = 0, batchSize = from.getShape().getBatchSize();
-		     batch < batchSize; ++batch) {
-			for (TensorDim y = 0, height = from.getShape().getHeight();
-			     y < height; ++y) {
-				T *toPtr = (*to)[batch][y].data();
-				const T *fromPtr = from[batch][y].data();
-				for (TensorDim x = 0, width = from.getShape().getWidth();
-				     x < width; ++x, toPtr += 3, fromPtr += 3) {
-					toPtr[0] = fromPtr[2];
-					toPtr[1] = fromPtr[1];
-					toPtr[2] = fromPtr[0];
-				}
-			}
-		}
-	}
 };
 
 template <typename T>
@@ -416,10 +392,6 @@ struct FastImpl {
 	template <typename U>
 	static void copy(Tensor<T> *to, const Tensor<U> &from) {
 		SimpleImpl<T>::copy(to, from);
-	}
-
-	static void convertRgbBgr(Tensor<T> *to, const Tensor<T> &from) {
-		SimpleImpl<T>::convertRgbBgr(to, from);
 	}
 };
 

@@ -115,6 +115,7 @@ Tensor<std::uint8_t> readPng(const char *fileName) {
 		::png_set_strip_alpha(pngStruct.pngPtr);
 		channels -= 1;
 	}
+	::png_set_bgr(pngStruct.pngPtr);
 	::png_read_update_info(pngStruct.pngPtr, pngStruct.pngInfoPtr);
 	assert(bitdepth ==
 	       ::png_get_bit_depth(pngStruct.pngPtr, pngStruct.pngInfoPtr));
