@@ -59,7 +59,7 @@ struct PngStruct {
 	}
 };
 
-Tensor<std::uint8_t> readPng(const char *fileName) {
+Tensor<std::uint8_t> readPng(const path_type *fileName) {
 	std::ifstream pngFile(fileName, std::ios::in | std::ios::binary);
 	pngFile.exceptions(std::ios::failbit | std::ios::badbit);
 	char header[kPngSignatureSize];

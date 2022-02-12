@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "benchmark/utils.h"
+#include "benchmark/tensor.h"
 
 namespace benchmark {
 
@@ -25,6 +26,9 @@ struct ConfigParseException : std::exception {
 struct DataConfig {
 	std::string lowResPath;
 	std::string hiResPath;
+	TensorDim width;
+	TensorDim height;
+	TensorDim upscaleFactor;
 };
 
 enum class BackendType { ONNXRUNTIME, TENSORFLOW, TENSORRT };

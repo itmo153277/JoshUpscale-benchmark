@@ -16,6 +16,7 @@
 #include <sstream>
 #include <string>
 
+#include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
 namespace benchmark {
@@ -54,7 +55,10 @@ DataConfig deserialize<DataConfig>(const YAML::Node &node) {
 		auto hiResPath = node["HiResPath"].as<std::string>();
 		validatePathMask(lowResPath);
 		validatePathMask(hiResPath);
-		return {lowResPath, hiResPath};
+		auto width = node["Width"].as<TensorDim>();
+		auto height = node["Height"].as<TensorDim>();
+		auto upscaleFactor = node["UpscaleFactor"].as<TensorDim>();
+		return {lowResPath, hiResPath, width, height, upscaleFactor};
 	} catch (...) {
 		throw_with_nested_id(
 		    ConfigParseException("Failed to parse data config"));

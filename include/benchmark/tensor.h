@@ -41,6 +41,14 @@ public:
 	TensorShape &operator=(const TensorShape &) = default;
 	TensorShape &operator=(TensorShape &&) noexcept = default;
 
+	bool operator==(const TensorShape &s) const {
+		return m_BatchSize == s.m_BatchSize && m_Height == s.m_Height &&
+		       m_Width == s.m_Width;
+	}
+	bool operator!=(const TensorShape &s) const {
+		return !(*this == s);
+	}
+
 	TensorDim getBatchSize() const {
 		return m_BatchSize;
 	}
@@ -96,9 +104,12 @@ private:
 		BaseIter &operator=(const BaseIter &) = default;
 		BaseIter &operator=(BaseIter &&) noexcept = default;
 
+		bool operator==(const BaseIter &s) const {
+			return m_BatchNumber == s.m_BatchNumber && m_Height == s.m_Height &&
+			       m_Width == s.m_Width && m_Channel == s.m_Channel;
+		}
 		bool operator!=(const BaseIter &s) const {
-			return m_BatchNumber != s.m_BatchNumber || m_Height != s.m_Height ||
-			       m_Width != s.m_Width || m_Channel != s.m_Channel;
+			return !(*this == s);
 		}
 		BaseIter &operator++() {
 			++m_Ptr;

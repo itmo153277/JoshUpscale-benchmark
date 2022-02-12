@@ -7,15 +7,22 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include "benchmark/cmdline.h"
 #include "benchmark/config.h"
+#include "benchmark/data.h"
 #include "benchmark/logging.h"
+#include "benchmark/tensor.h"
 #include "benchmark/utils.h"
 
 namespace cmdline = benchmark::cmdline;
 namespace config = benchmark::config;
+namespace data = benchmark::data;
+
+using TensorShape = benchmark::TensorShape;
+using Tensor = benchmark::Tensor<std::uint8_t>;
 
 struct CmdArguments {
 	std::string profilePath = ".";
@@ -100,6 +107,21 @@ bool parseArguments(CmdArguments *argState, int argc, char *argv[]) {
 	return true;
 }
 
+std::tuple<Tensor, Tensor> readData(const config::DataConfig &dataConfig) {
+	TensorShape lowResShape = {1, dataConfig.height, dataConfig.width};
+	TensorShape hiResShape = {1, dataConfig.height * dataConfig.upscaleFactor,
+	    dataConfig.width * dataConfig.upscaleFactor};
+	auto lowResImgs =
+	    data::loadData(dataConfig.lowResPath.c_str(), lowResShape);
+	auto hiResImgs = data::loadData(dataConfig.hiResPath.c_str(), hiResShape);
+	if (hiResImgs.getShape().getBatchSize() !=
+	    lowResImgs.getShape().getBatchSize()) {
+		throw std::invalid_argument(
+		    "Number of images for hi and low res must be equal");
+	}
+	return {std::move(lowResImgs), std::move(hiResImgs)};
+}
+
 int main(int argc, char *argv[]) {
 	try {
 		CmdArguments argState;
@@ -111,6 +133,8 @@ int main(int argc, char *argv[]) {
 		    config::readConfig(configPath.c_str());
 		std::filesystem::path profilePath = argState.profilePath;
 		std::filesystem::path cachePath = argState.cachePath;
+		LOG_INFO << "Loading data";
+		readData(benchmarkConfig.dataConfig);
 	} catch (...) {
 		LOG_EXCEPTION;
 		return 1;
